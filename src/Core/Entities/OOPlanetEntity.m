@@ -26,7 +26,7 @@ MA 02110-1301, USA.
 
 #if NEW_PLANETS
 
-#define NEW_ATMOSPHERE 0
+#define NEW_ATMOSPHERE 1
 
 #import "OOPlanetDrawable.h"
 
@@ -361,7 +361,7 @@ static OOColor *ColorWithHSBColor(Vector c)
 
 - (NSString*) descriptionComponents
 {
-	return [NSString stringWithFormat:@"position: %@ radius: %g m", VectorDescription([self position]), [self radius]];
+	return [NSString stringWithFormat:@"position: %@ radius: %g m", HPVectorDescription([self position]), [self radius]];
 }
 
 
@@ -529,7 +529,7 @@ static OOColor *ColorWithHSBColor(Vector c)
 										   parameter:nil
 									relativeToEntity:self];
 	
-	if (station && distance([station position], position) < 4 * collision_radius) // there is a station in range.
+	if (station && HPdistance([station position], position) < 4 * collision_radius) // there is a station in range.
 	{
 		return YES;
 	}
@@ -551,7 +551,7 @@ static OOColor *ColorWithHSBColor(Vector c)
 	Quaternion  q1;
 	quaternion_set_random(&q1);
 	float start_distance = collision_radius + 125.0f;
-	Vector launch_pos = vector_add(position, vector_multiply_scalar(vector_forward_from_quaternion(q1), start_distance));
+	HPVector launch_pos = HPvector_add(position, HPvector_multiply_scalar(vectorToHPVector(vector_forward_from_quaternion(q1)), start_distance));
 	
 	ShipEntity *shuttle_ship = [UNIVERSE newShipWithRole:@"shuttle"];   // retain count = 1
 	if (shuttle_ship)
