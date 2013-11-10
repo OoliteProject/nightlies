@@ -49,7 +49,7 @@ static NSString * const kOOLogEntityAddToList				= @"entity.linkedList.add";
 static NSString * const kOOLogEntityAddToListError			= @"entity.linkedList.add.error";
 static NSString * const kOOLogEntityRemoveFromList			= @"entity.linkedList.remove";
 static NSString * const kOOLogEntityRemoveFromListError		= @"entity.linkedList.remove.error";
-	   NSString * const kOOLogEntityVerificationError		= @"entity.linkedList.verify.error";
+static NSString * const kOOLogEntityVerificationError		= @"entity.linkedList.verify.error";
 static NSString * const kOOLogEntityUpdateError				= @"entity.linkedList.update.error";
 
 
@@ -923,13 +923,19 @@ static NSString * const kOOLogEntityUpdateError				= @"entity.linkedList.update.
 	
 	if ([self status] != STATUS_COCKPIT_DISPLAY)
 	{
-		position = HPvector_add(position, HPvector_multiply_scalar(vectorToHPVector(velocity), delta_t));
+		[self applyVelocity:delta_t];
 	}
 
 	hasMoved = !HPvector_equal(position, lastPosition);
 	hasRotated = !quaternion_equal(orientation, lastOrientation);
 	lastPosition = position;
 	lastOrientation = orientation;
+}
+
+
+- (void) applyVelocity:(OOTimeDelta)delta_t;
+{
+	position = HPvector_add(position, HPvector_multiply_scalar(vectorToHPVector(velocity), delta_t));
 }
 
 
