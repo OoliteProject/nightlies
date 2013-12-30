@@ -368,7 +368,6 @@
 		"systemPopulation",		// Was systemPopulation_number
 		"systemProductivity",	// Was systemProductivity_number
 		// planet
-		"_transform",
 		"planetRadius",
 		"atmosphereRadius",
 	);

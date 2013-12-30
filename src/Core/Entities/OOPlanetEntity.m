@@ -26,7 +26,7 @@ MA 02110-1301, USA.
 
 #if NEW_PLANETS
 
-#define NEW_ATMOSPHERE 0
+#define NEW_ATMOSPHERE 1
 
 #import "OOPlanetDrawable.h"
 
@@ -136,7 +136,7 @@ const double kMesosphere = 10.0 * ATMOSPHERE_DEPTH;	// atmosphere effect starts 
 		//OOLog (@"kaks",@" translated air colour:%@ cloud colour:%@ polar cloud color:%@", [_airColor rgbaDescription],[(OOColor *)[planetInfo objectForKey:@"cloud_color"] rgbaDescription],[(OOColor *)[planetInfo objectForKey:@"polar_cloud_color"] rgbaDescription]);
 
 		_materialParameters = [planetInfo dictionaryWithValuesForKeys:[NSArray arrayWithObjects:@"cloud_fraction", @"air_color",  @"cloud_color", @"polar_cloud_color", @"cloud_alpha",
-															@"land_fraction", @"land_color", @"sea_color", @"polar_land_color", @"polar_sea_color", @"noise_map_seed", @"economy", nil]];
+															@"land_fraction", @"land_color", @"sea_color", @"polar_land_color", @"polar_sea_color", @"noise_map_seed", @"economy", @"materials", @"shaders", nil]];
 	}
 	else
 #else
@@ -158,6 +158,7 @@ const double kMesosphere = 10.0 * ATMOSPHERE_DEPTH;	// atmosphere effect starts 
 	NSString *textureName = [dict oo_stringForKey:@"texture"];
         [self setUpPlanetFromTexture:textureName];              
 	NSString *atmosphereTextureName = [dict oo_stringForKey:@"atmosphere_texture"];
+    OOLog(@"submersible", @"setup atmos from %@" , atmosphereTextureName );
 	if (atmosphere) [self setUpPlanetFromAtmosphereTexture:atmosphereTextureName];
 
 	[_planetDrawable setRadius:collision_radius];	
