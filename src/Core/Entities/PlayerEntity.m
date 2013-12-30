@@ -68,6 +68,7 @@ MA 02110-1301, USA.
 #import "OOEquipmentType.h"
 #import "NSFileManagerOOExtensions.h"
 #import "OOFullScreenController.h"
+#import "OODebugSupport.h"
 
 #import "OOJSScript.h"
 #import "OOScriptTimer.h"
@@ -840,6 +841,12 @@ static GLfloat		sBaseMass = 0.0;
 	HPVector dpos = [dockedStation position];
 	[result setObject:ArrayFromHPVector(dpos) forKey:@"docked_station_position"];
 	[result setObject:[UNIVERSE getStationMarkets] forKey:@"station_markets"];
+
+	// scenario information
+	if (scenarioKey != nil)
+	{
+		[result setObject:scenarioKey forKey:@"scenario"];
+	}
 
 	// create checksum
 	clear_checksum();
@@ -1745,6 +1752,7 @@ static GLfloat		sBaseMass = 0.0;
 - (void) completeSetUpAndSetTarget:(BOOL)setTarget
 {
 	[OOSoundSource stopAll];
+
 	[self setDockedStation:[UNIVERSE station]];
 	[self setLastAegisLock:[UNIVERSE planet]];
 		
@@ -1893,6 +1901,7 @@ static GLfloat		sBaseMass = 0.0;
 	DESTROY(specialCargo);
 	
 	DESTROY(save_path);
+	DESTROY(scenarioKey);
 	
 	DESTROY(_customViews);
 	
@@ -2003,7 +2012,7 @@ static GLfloat		sBaseMass = 0.0;
 	[self updateTrumbles:delta_t];
 	
 	OOEntityStatus status = [self status];
-	if (EXPECT_NOT(status == STATUS_START_GAME && gui_screen != GUI_SCREEN_INTRO1 && gui_screen != GUI_SCREEN_INTRO2))
+	if (EXPECT_NOT(status == STATUS_START_GAME && gui_screen != GUI_SCREEN_INTRO1 && gui_screen != GUI_SCREEN_INTRO2 && gui_screen != GUI_SCREEN_NEWGAME && gui_screen != GUI_SCREEN_LOAD))
 	{
 		UPDATE_STAGE(@"setGuiToIntroFirstGo:");
 		[self setGuiToIntroFirstGo:YES];	//set up demo mode
@@ -2439,6 +2448,8 @@ static GLfloat		sBaseMass = 0.0;
 		[UNIVERSE addMessage:DESC(@"target-lost") forCount:3.0];
 		[self removeTarget:primeTarget];
 	}
+	// compass sanity check and update target for changed mode
+	[self validateCompassTarget];
 	
 	// update subentities
 	UPDATE_STAGE(@"updating subentities");
@@ -2605,6 +2616,7 @@ static GLfloat		sBaseMass = 0.0;
 			case GUI_SCREEN_MAIN:
 			case GUI_SCREEN_INTRO1:
 			case GUI_SCREEN_INTRO2:
+			case GUI_SCREEN_NEWGAME:
 			case GUI_SCREEN_MARKET:
 			case GUI_SCREEN_OPTIONS:
 			case GUI_SCREEN_GAMEOPTIONS:
@@ -2889,6 +2901,9 @@ static GLfloat		sBaseMass = 0.0;
 		[self setScriptedMisjumpRange:0.5];
 
 		[self doScriptEvent:OOJSID("shipExitedWitchspace")];
+
+		[self doBookkeeping:delta_t]; // arrival frame updates
+
 		suppressAegisMessages=NO;
 	}
 }
@@ -3793,7 +3808,7 @@ static GLfloat		sBaseMass = 0.0;
 
 - (void) addRoleForAggression:(ShipEntity *)victim
 {
-	if ([victim isUnpiloted] || [victim isHulk] || [victim hasHostileTarget] || [[victim primaryAggressor] isPlayer])
+	if ([victim isExplicitlyUnpiloted] || [victim isHulk] || [victim hasHostileTarget] || [[victim primaryAggressor] isPlayer])
 	{
 		return;
 	}
@@ -3955,6 +3970,71 @@ static GLfloat		sBaseMass = 0.0;
 {
 	[compassTarget release];
 	compassTarget = [value weakRetain];
+}
+
+
+- (void) validateCompassTarget
+{
+	OOSunEntity		*the_sun = [UNIVERSE sun];
+	OOPlanetEntity	*the_planet = [UNIVERSE planet];
+	StationEntity	*the_station = [UNIVERSE station];
+	Entity			*the_target = [self primaryTarget];
+	Entity <OOBeaconEntity>		*beacon = [self nextBeacon];
+	if ([self isInSpace] && the_sun && the_planet		// be in a system
+		&& ![the_sun goneNova])			// and the system has not been novabombed
+	{
+		Entity *new_target = nil;
+		OOAegisStatus	aegis = [self checkForAegis];
+		
+		switch ([self compassMode])
+		{
+			case COMPASS_MODE_INACTIVE:
+				break;
+			
+			case COMPASS_MODE_BASIC:
+				if ((aegis == AEGIS_CLOSE_TO_MAIN_PLANET || aegis == AEGIS_IN_DOCKING_RANGE) && the_station)
+				{
+					new_target = the_station;
+				}
+				else
+				{
+					new_target = the_planet;
+				}
+				break;
+				
+			case COMPASS_MODE_PLANET:
+				new_target = the_planet;
+				break;
+				
+			case COMPASS_MODE_STATION:
+				new_target = the_station;
+				break;
+				
+			case COMPASS_MODE_SUN:
+				new_target = the_sun;
+				break;
+				
+			case COMPASS_MODE_TARGET:
+				new_target = the_target;
+				break;
+				
+			case COMPASS_MODE_BEACONS:
+				new_target = beacon;
+				break;
+		}
+		
+		if (new_target == nil || [new_target status] < STATUS_ACTIVE || [new_target status] == STATUS_IN_HOLD)
+		{
+			[self setCompassMode:COMPASS_MODE_PLANET];
+			new_target = the_planet;
+		}
+		
+		if (EXPECT_NOT(new_target != [self compassTarget]))
+		{
+			[self setCompassTarget:new_target];
+			[self doScriptEvent:OOJSID("compassTargetChanged") withArguments:[NSArray arrayWithObjects:new_target, OOStringFromCompassMode([self compassMode]), nil]];
+		}
+	}
 }
 
 
@@ -4453,7 +4533,14 @@ static GLfloat		sBaseMass = 0.0;
 
 	if ([ms isEqual:@"INCOMING_MISSILE"])
 	{
-		[self playIncomingMissile];
+		if ([self primaryAggressor] != nil)
+		{
+			[self playIncomingMissile:HPVectorToVector([[self primaryAggressor] position])];
+		}
+		else
+		{
+			[self playIncomingMissile:kZeroVector];
+		}
 		[UNIVERSE addMessage:DESC(@"incoming-missile") forCount:4.5];
 	}
 
@@ -4547,7 +4634,7 @@ static GLfloat		sBaseMass = 0.0;
 	{
 		firedMissile = [self launchMine:missile];
 		if (!replacingMissile) [self removeFromPylon:activeMissile];
-		if (firedMissile != nil) [self playMineLaunched];
+		if (firedMissile != nil) [self playMineLaunched:[self missileLaunchPosition]];
 	}
 	else
 	{
@@ -4558,7 +4645,7 @@ static GLfloat		sBaseMass = 0.0;
 		if (firedMissile != nil)
 		{
 			if (!replacingMissile) [self removeFromPylon:activeMissile];
-			[self playMissileLaunched];
+			[self playMissileLaunched:[self missileLaunchPosition]];
 		}
 	}
 	
@@ -4772,6 +4859,12 @@ static GLfloat		sBaseMass = 0.0;
 }
 
 
+- (Vector) currentLaserOffset
+{
+	return [self laserPortOffset:currentWeaponFacing];
+}
+
+
 - (BOOL) fireMainWeapon
 {
 	int weapon_to_be_fired = [self currentWeapon];
@@ -4783,7 +4876,7 @@ static GLfloat		sBaseMass = 0.0;
 	
 	if (weapon_temp / PLAYER_MAX_WEAPON_TEMP >= WEAPON_COOLING_CUTOUT)
 	{
-		[self playWeaponOverheated];
+		[self playWeaponOverheated:[self currentLaserOffset]];
 		[UNIVERSE addMessage:DESC(@"weapon-overheat") forCount:3.0];
 		return NO;
 	}
@@ -4943,7 +5036,7 @@ static GLfloat		sBaseMass = 0.0;
 - (void) takeEnergyDamage:(double)amount from:(Entity *)ent becauseOf:(Entity *)other
 {
 	HPVector		rel_pos;
-	double		d_forward;
+	double		d_forward, d_right, d_up;
 	BOOL		internal_damage = NO;	// base chance
 	
 	OOLog(@"player.ship.damage",  @"Player took damage from %@ becauseOf %@", ent, other);
@@ -4971,8 +5064,11 @@ static GLfloat		sBaseMass = 0.0;
 	if ([ent isShip]) [(ShipEntity *)ent doScriptEvent:OOJSID("shipAttackedOther") withArgument:self];
 
 	d_forward = dot_product(HPVectorToVector(rel_pos), v_forward);
-	
-	[self playShieldHit];
+	d_right = dot_product(HPVectorToVector(rel_pos), v_right);
+	d_up = dot_product(HPVectorToVector(rel_pos), v_up);
+	Vector relative = make_vector(d_right,d_up,d_forward);
+
+	[self playShieldHit:relative];
 
 	// firing on an innocent ship is an offence
 	if ([other isShip])
@@ -5013,7 +5109,7 @@ static GLfloat		sBaseMass = 0.0;
 	{
 		internal_damage = ((ranrot_rand() & PLAYER_INTERNAL_DAMAGE_FACTOR) < amount);	// base chance of damage to systems
 		energy -= amount;
-		[self playDirectHit];
+		[self playDirectHit:relative];
 		ship_temperature += (amount / [self heatInsulation]);
 	}
 	[self noteTakingDamage:amount from:other type:damageType];
@@ -5038,7 +5134,7 @@ static GLfloat		sBaseMass = 0.0;
 - (void) takeScrapeDamage:(double) amount from:(Entity *) ent
 {
 	HPVector  rel_pos;
-	double  d_forward;
+	double  d_forward, d_right, d_up;
 	BOOL	internal_damage = NO;	// base chance
 	
 	if ([self status] == STATUS_DEAD)  return;
@@ -5055,8 +5151,11 @@ static GLfloat		sBaseMass = 0.0;
 	rel_pos = HPvector_subtract(rel_pos, position);
 	// rel_pos is now small
 	d_forward = dot_product(HPVectorToVector(rel_pos), v_forward);
-	
-	[self playScrapeDamage];
+	d_right = dot_product(HPVectorToVector(rel_pos), v_right);
+	d_up = dot_product(HPVectorToVector(rel_pos), v_up);
+	Vector relative = make_vector(d_right,d_up,d_forward);
+
+	[self playScrapeDamage:relative];
 	if (d_forward >= 0)
 	{
 		forward_shield -= amount;
@@ -5647,10 +5746,23 @@ static GLfloat		sBaseMass = 0.0;
 }
 
 
+- (BOOL) endScenario:(NSString *)key
+{
+	if (scenarioKey != nil && [key isEqualToString:scenarioKey])
+	{
+		[self setStatus:STATUS_RESTART_GAME];
+		return YES;
+	}
+	return NO;
+}
+
+
 - (void) enterDock:(StationEntity *)station
 {
 	NSParameterAssert(station != nil);
 	if ([self status] == STATUS_DEAD)  return;
+	
+	OOProfilerStartMarker(@"dock");
 	
 	[self setStatus:STATUS_DOCKING];
 	[self setDockedStation:station];
@@ -5685,6 +5797,8 @@ static GLfloat		sBaseMass = 0.0;
 
 - (void) docked
 {
+	OOProfilerPointMarker(@"-docked called");
+	
 	StationEntity *dockedStation = [self dockedStation];
 	if (dockedStation == nil)
 	{
@@ -5769,6 +5883,8 @@ static GLfloat		sBaseMass = 0.0;
 	
 	// When a mission screen is started, any on-screen message is removed immediately.
 	[self doWorldEventUntilMissionScreen:OOJSID("missionScreenOpportunity")];	// also displays docking reports first.
+	
+	OOProfilerEndMarker(@"dock");
 }
 
 
@@ -5776,6 +5892,8 @@ static GLfloat		sBaseMass = 0.0;
 {
 	if (station == nil)  return;
 	NSParameterAssert(station == [self dockedStation]);
+	
+	OOProfilerStartMarker(@"undock");
 	
 	// ensure we've not left keyboard entry on
 	[[UNIVERSE gameView] allowStringInput: NO];
@@ -5853,12 +5971,16 @@ static GLfloat		sBaseMass = 0.0;
 	[demoShip release];
 	demoShip = nil;
 	
+	OOProfilerEndMarker(@"undock");
+	
 	[self playLaunchFromStation];
 }
 
 
 - (void) witchStart
 {
+	OOProfilerStartMarker(@"witchspace");
+	
 	// chances of entering witchspace with autopilot on are very low, but as Berlios bug #18307 has shown us, entirely possible
 	// so in such cases we need to ensure that at least the docking music stops playing
 	if (autopilot_engaged)  [self disengageAutopilot];
@@ -5888,7 +6010,8 @@ static GLfloat		sBaseMass = 0.0;
 	[UNIVERSE allShipsDoScriptEvent:OOJSID("playerWillEnterWitchspace") andReactToAIMessage:@"PLAYER WITCHSPACE"];
 	
 	// set the new market seed now!
-	ranrot_srand((unsigned int)[[NSDate date] timeIntervalSince1970]);	// seed randomiser by time
+	// reseeding the RNG should be completely unnecessary here
+//	ranrot_srand((uint32_t)[[NSDate date] timeIntervalSince1970]);	// seed randomiser by time
 	market_rnd = ranrot_rand() & 255;						// random factor for market values is reset
 }
 
@@ -5901,6 +6024,8 @@ static GLfloat		sBaseMass = 0.0;
 	[UNIVERSE setUpUniverseFromWitchspace];
 	[[UNIVERSE planet] update: 2.34375 * market_rnd];	// from 0..10 minutes
 	[[UNIVERSE station] update: 2.34375 * market_rnd];	// from 0..10 minutes
+	
+	OOProfilerEndMarker(@"witchspace");
 }
 
 
@@ -7301,7 +7426,7 @@ static GLfloat		sBaseMass = 0.0;
 		GuiDisplayGen* gui = [UNIVERSE gui];
 		GUI_ROW_INIT(gui);
 
-		int first_sel_row = (canLoadOrSave)? GUI_ROW(,SAVE) : GUI_ROW(,BEGIN_NEW);
+		int first_sel_row = (canLoadOrSave)? GUI_ROW(,SAVE) : GUI_ROW(,GAMEOPTIONS);
 		if (canQuickSave)
 			first_sel_row = GUI_ROW(,QUICKSAVE);
 
@@ -7327,7 +7452,7 @@ static GLfloat		sBaseMass = 0.0;
 			[gui setColor:[OOColor grayColor] forRow:GUI_ROW(,LOAD)];
 		}
 
-		[gui setText:DESC(@"options-begin-new-game") forRow:GUI_ROW(,BEGIN_NEW) align:GUI_ALIGN_CENTER];
+		[gui setText:DESC(@"options-return-to-menu") forRow:GUI_ROW(,BEGIN_NEW) align:GUI_ALIGN_CENTER];
 		[gui setKey:GUI_KEY_OK forRow:GUI_ROW(,BEGIN_NEW)];
 
 		[gui setText:DESC(@"options-game-options") forRow:GUI_ROW(,GAMEOPTIONS) align:GUI_ALIGN_CENTER];
@@ -7342,12 +7467,6 @@ static GLfloat		sBaseMass = 0.0;
 		[gui setKey:GUI_KEY_OK forRow:GUI_ROW(,QUIT)];
 #endif
 		
-		if ([UNIVERSE strict])
-			[gui setText:DESC(@"options-reset-to-unrestricted-play") forRow:GUI_ROW(,STRICT) align:GUI_ALIGN_CENTER];
-		else
-			[gui setText:DESC(@"options-reset-to-strict-play") forRow:GUI_ROW(,STRICT) align:GUI_ALIGN_CENTER];
-		[gui setKey:GUI_KEY_OK forRow:GUI_ROW(,STRICT)];
-
 		[gui setSelectableRange:NSMakeRange(first_sel_row, GUI_ROW_OPTIONS_END_OF_LIST)];
 
 		if ([[UNIVERSE gameController] isGamePaused] || (!canLoadOrSave && [self status] == STATUS_DOCKED))
@@ -8002,6 +8121,71 @@ static NSString *last_outfitting_key=nil;
 }
 
 
+- (void) setupStartScreenGui
+{
+	GuiDisplayGen	*gui = [UNIVERSE gui];
+	NSString		*text = nil;
+
+	[[UNIVERSE gameController] setMouseInteractionModeForUIWithMouseInteraction:YES];
+
+	[gui clear];
+
+	[gui setTitle:@"Oolite"];
+
+	text = DESC(@"game-copyright");
+	[gui setText:text forRow:15 align:GUI_ALIGN_CENTER];
+	[gui setColor:[OOColor whiteColor] forRow:15];
+		
+	text = DESC(@"theme-music-credit");
+	[gui setText:text forRow:17 align:GUI_ALIGN_CENTER];
+	[gui setColor:[OOColor grayColor] forRow:17];
+		
+	int row = 22;
+
+	text = DESC(@"oolite-start-option-1");
+	[gui setText:text forRow:row align:GUI_ALIGN_CENTER];
+	[gui setColor:[OOColor yellowColor] forRow:row];
+	[gui setKey:[NSString stringWithFormat:@"Start:%d", row] forRow:row];
+
+	++row;
+
+	text = DESC(@"oolite-start-option-2");
+	[gui setText:text forRow:row align:GUI_ALIGN_CENTER];
+	[gui setColor:[OOColor yellowColor] forRow:row];
+	[gui setKey:[NSString stringWithFormat:@"Start:%d", row] forRow:row];
+
+	++row;
+
+	text = DESC(@"oolite-start-option-3");
+	[gui setText:text forRow:row align:GUI_ALIGN_CENTER];
+	[gui setColor:[OOColor yellowColor] forRow:row];
+	[gui setKey:[NSString stringWithFormat:@"Start:%d", row] forRow:row];
+
+	++row;
+
+#if 0
+	// not yet implemented
+	text = DESC(@"oolite-start-option-4");
+	[gui setText:text forRow:row align:GUI_ALIGN_CENTER];
+	[gui setColor:[OOColor yellowColor] forRow:row];
+	[gui setKey:[NSString stringWithFormat:@"Start:%d", row] forRow:row];
+#endif
+
+	++row;
+
+	text = DESC(@"oolite-start-option-5");
+	[gui setText:text forRow:row align:GUI_ALIGN_CENTER];
+	[gui setColor:[OOColor yellowColor] forRow:row];
+	[gui setKey:[NSString stringWithFormat:@"Start:%d", row] forRow:row];
+
+	[gui setSelectableRange:NSMakeRange(22,5)];
+	[gui setSelectedRow:22];
+
+	[gui setBackgroundTextureKey:@"intro"];
+
+}
+
+
 - (void) setGuiToIntroFirstGo:(BOOL)justCobra
 {
 	NSString 		*text = nil;
@@ -8009,28 +8193,17 @@ static NSString *last_outfitting_key=nil;
 	OOGUIRow 		msgLine = 2;
 	
 	[[UNIVERSE gameController] setMouseInteractionModeForUIWithMouseInteraction:NO];
+	[[UNIVERSE gameView] clearMouse];
 
 	if (justCobra)
 	{
+		[UNIVERSE removeDemoShips];
 		[[OOCacheManager sharedCache] flush];	// At first startup, a lot of stuff is cached
 	}
-	[gui clear];
-	[gui setTitle:@"Oolite"];
 	
 	if (justCobra)
 	{
-		text = DESC(@"game-copyright");
-		[gui setText:text forRow:15 align:GUI_ALIGN_CENTER];
-		[gui setColor:[OOColor whiteColor] forRow:15];
-		
-		text = DESC(@"theme-music-credit");
-		[gui setText:text forRow:17 align:GUI_ALIGN_CENTER];
-		[gui setColor:[OOColor grayColor] forRow:17];
-		
-        text = DESC(@"load-previous-commander");
-        [gui setText:text forRow:19 align:GUI_ALIGN_CENTER];
-        [gui setColor:[OOColor yellowColor] forRow:19];
-
+		[self setupStartScreenGui];
 		
 		// check for error messages from Resource Manager
 		//[ResourceManager paths]; done in Universe already
@@ -8101,10 +8274,14 @@ static NSString *last_outfitting_key=nil;
 	}
 	else
 	{
-		[gui setText:([UNIVERSE strict])? DESC(@"strict-play-enabled"):DESC(@"unrestricted-play-enabled") forRow:1 align:GUI_ALIGN_CENTER];
-		text = DESC(@"press-space-commander");
-		[gui setText:text forRow:21 align:GUI_ALIGN_CENTER];
-		[gui setColor:[OOColor yellowColor] forRow:21];
+		[gui clear];
+
+        text = DESC(@"oolite-ship-library-title");
+		[gui setTitle:text];
+
+        text = DESC(@"oolite-ship-library-exit");
+        [gui setText:text forRow:23 align:GUI_ALIGN_CENTER];
+        [gui setColor:[OOColor yellowColor] forRow:23];
 	}
 	
 	[gui setShowTextCursor:NO];
@@ -8119,7 +8296,7 @@ static NSString *last_outfitting_key=nil;
 	
 	[self setShowDemoShips:YES];
 	[gui setBackgroundTextureKey:@"intro"];
-	[UNIVERSE enterGUIViewModeWithMouseInteraction:NO];
+	[UNIVERSE enterGUIViewModeWithMouseInteraction:YES];
 }
 
 
@@ -10211,6 +10388,9 @@ else _dockTarget = NO_TARGET;
         case STATUS_START_GAME:
             isDockedStatus = YES;
             break;   
+			// special case - can be either docked or not, so avoid safety check below
+		case STATUS_RESTART_GAME:
+			return NO;
 		case STATUS_EFFECT:
 		case STATUS_ACTIVE:
 		case STATUS_COCKPIT_DISPLAY:
@@ -10556,9 +10736,7 @@ else _dockTarget = NO_TARGET;
 	key_ecm &&
 	key_prime_equipment &&
 	key_activate_equipment &&
-#if FEATURE_REQUEST_5496
 	key_mode_equipment &&
-#endif
 	key_fastactivate_equipment_a &&
 	key_fastactivate_equipment_b &&
 	key_target_missile &&
@@ -10601,7 +10779,9 @@ else _dockTarget = NO_TARGET;
 	stickFunctions &&
 	showingLongRangeChart &&
 	_missionAllowInterrupt &&
-	_missionScreenID;
+	_missionScreenID &&
+	_missionTitle &&
+	_missionTextEntry;
 }
 #endif
 

@@ -458,6 +458,17 @@ static ShipEntity *doOctreesCollide(ShipEntity *prime, ShipEntity *other);
 	
 	isShip = YES;
 
+	// scan class settings. 'scanClass' is in common usage, but we could also have a more standard 'scan_class' key with higher precedence. Kaks 20090810 
+	// let's see if scan_class is set... 
+	scanClass = OOScanClassFromString([shipDict oo_stringForKey:@"scan_class" defaultValue:@"CLASS_NOT_SET"]);
+	
+	// if not, try 'scanClass'. NOTE: non-standard capitalization is documented and entrenched.
+	if (scanClass == CLASS_NOT_SET)
+	{
+		scanClass = OOScanClassFromString([shipDict oo_stringForKey:@"scanClass" defaultValue:@"CLASS_NOT_SET"]);
+	}
+
+
 	// FIXME: give NPCs shields instead.
 	if ([shipDict oo_fuzzyBooleanForKey:@"has_shield_booster"])  [self addEquipmentItem:@"EQ_SHIELD_BOOSTER" inContext:@"npc"];
 	if ([shipDict oo_fuzzyBooleanForKey:@"has_shield_enhancer"])  [self addEquipmentItem:@"EQ_SHIELD_ENHANCER" inContext:@"npc"];
@@ -540,6 +551,13 @@ static ShipEntity *doOctreesCollide(ShipEntity *prime, ShipEntity *other);
 		
 		[self setUpCargoType:cargoString];
 	}
+	else if (scanClass != CLASS_CARGO)
+	{
+		if (cargo != nil) [cargo autorelease];
+		cargo = [[NSMutableArray alloc] initWithCapacity:max_cargo]; // alloc retains;
+		// if not CLASS_CARGO, and no cargo type set, default to CARGO_NOT_CARGO
+		cargo_type = CARGO_NOT_CARGO;
+	}
 	
 	hasScoopMessage = [shipDict oo_boolForKey:@"has_scoop_message" defaultValue:YES];
 
@@ -556,16 +574,6 @@ static ShipEntity *doOctreesCollide(ShipEntity *prime, ShipEntity *other);
 	[self setScannerDisplayColor1:nil];
 	[self setScannerDisplayColor2:nil];
 
-	// scan class settings. 'scanClass' is in common usage, but we could also have a more standard 'scan_class' key with higher precedence. Kaks 20090810 
-	// let's see if scan_class is set... 
-	scanClass = OOScanClassFromString([shipDict oo_stringForKey:@"scan_class" defaultValue:@"CLASS_NOT_SET"]);
-	
-	// if not, try 'scanClass'. NOTE: non-standard capitalization is documented and entrenched.
-	if (scanClass == CLASS_NOT_SET)
-	{
-		scanClass = OOScanClassFromString([shipDict oo_stringForKey:@"scanClass" defaultValue:@"CLASS_NOT_SET"]);
-	}
-	
 	// Populate the missiles here. Must come after scanClass.
 	_missileRole = [shipDict oo_stringForKey:@"missile_role"];
 	unsigned	i, j;
@@ -636,14 +644,15 @@ static ShipEntity *doOctreesCollide(ShipEntity *prime, ShipEntity *other);
 	[self setHeatInsulation:[shipDict oo_floatForKey:@"heat_insulation" defaultValue:[self hasHeatShield] ? 2.0 : 1.0]];
 	
 	// unpiloted (like missiles asteroids etc.)
-	if ((isUnpiloted = [shipDict oo_fuzzyBooleanForKey:@"unpiloted"])) 
+	_explicitlyUnpiloted = [shipDict oo_fuzzyBooleanForKey:@"unpiloted"];
+	if (_explicitlyUnpiloted)
 	{
 		[self setCrew:nil];
 	}
 	else 
 	{
 		// crew and passengers
-		NSDictionary* cdict = [[UNIVERSE characters] objectForKey:[shipDict oo_stringForKey:@"pilot"]];
+		NSDictionary *cdict = [[UNIVERSE characters] objectForKey:[shipDict oo_stringForKey:@"pilot"]];
 		if (cdict != nil)
 		{
 			OOCharacter	*pilot = [OOCharacter characterWithDictionary:cdict];
@@ -1593,6 +1602,9 @@ static ShipEntity *doOctreesCollide(ShipEntity *prime, ShipEntity *other);
 		
 		if (escorter == nil)  break;
 		[self setUpOneEscort:escorter inGroup:escortGroup withRole:escortRole atPosition:ex_pos andCount:currentEscortCount];
+
+		[escorter release];
+
 		_pendingEscortCount--;
 		currentEscortCount = [escortGroup count] - 1;
 	}
@@ -1668,6 +1680,7 @@ static ShipEntity *doOctreesCollide(ShipEntity *prime, ShipEntity *other);
 					break;
 				}
 				[self setUpOneEscort:escorter inGroup:escortGroup withRole:escortRole atPosition:ex_pos andCount:currentEscortCount];
+				[escorter release];
 			}
 			currentEscortCount++;
 			_maxEscortCount++;
@@ -1718,9 +1731,7 @@ static ShipEntity *doOctreesCollide(ShipEntity *prime, ShipEntity *other);
 		
 	if ([escorter crew] == nil)
 	{
-		[escorter setCrew:[NSArray arrayWithObject:
-									   [OOCharacter randomCharacterWithRole: pilotRole
-														  andOriginalSystem: [UNIVERSE systemSeed]]]];
+		[escorter setSingleCrewWithRole:pilotRole];
 	}
 		
 	[escorter setPrimaryRole:defaultRole];	//for mothership
@@ -1783,7 +1794,6 @@ static ShipEntity *doOctreesCollide(ShipEntity *prime, ShipEntity *other);
 		// otherwise force the escort to be clean
 		[escorter setBounty:0 withReason:kOOLegalStatusReasonSetup];
 	}
-	[escorter release];
 	
 }
 
@@ -4148,10 +4158,7 @@ ShipEntity* doOctreesCollide(ShipEntity* prime, ShipEntity* other)
 
 - (void) behaviour_attack_target:(double) delta_t
 {
-	BOOL	canBurn = [self hasFuelInjection] && (fuel > MIN_FUEL);
-	float	max_available_speed = maxFlightSpeed;
 	double  range = [self rangeToPrimaryTarget];
-	if (canBurn) max_available_speed *= [self afterburnerFactor];
 	
 	if (cloakAutomatic) [self activateCloakingDevice];
 
@@ -6674,9 +6681,15 @@ static GLfloat scripted_color[4] = 	{ 0.0, 0.0, 0.0, 0.0};	// to be defined by s
 }
 
 
+- (BOOL)isExplicitlyUnpiloted
+{
+	return _explicitlyUnpiloted;
+}
+
+
 - (BOOL)isUnpiloted
 {
-	return isUnpiloted;
+	return [self isExplicitlyUnpiloted] || [self isHulk] || [self scanClass] == CLASS_ROCK || [self scanClass] == CLASS_CARGO;
 }
 
 
@@ -6894,7 +6907,6 @@ static BOOL IsBehaviourHostile(OOBehaviour behaviour)
 			{
 				[shipAI message:@"AWAY_FROM_PLANET"];
 			}
-			[self setLastAegisLock:nil];
 		}
 
 		if (aegis_status != AEGIS_CLOSE_TO_ANY_PLANET)
@@ -7125,7 +7137,7 @@ NSComparisonResult ComparePlanetsBySurfaceDistance(id i1, id i2, void* context)
 		{
 			if([self lastAegisLock] == nil && !sunGoneNova)
 			{
-				[self setLastAegisLock:[UNIVERSE planet]];  // in case of a first launch.
+				[self setLastAegisLock:[UNIVERSE planet]];  // in case of a first launch from a near-planet station.
 			}
 			[self transitionToAegisNone];
 		}
@@ -7166,6 +7178,10 @@ NSComparisonResult ComparePlanetsBySurfaceDistance(id i1, id i2, void* context)
 		}
 		
 
+	}
+	if (result == AEGIS_NONE)
+	{
+		[self setLastAegisLock:nil];
 	}
 
 	aegis_status = result;	// put this here
@@ -7253,10 +7269,10 @@ NSComparisonResult ComparePlanetsBySurfaceDistance(id i1, id i2, void* context)
 
 - (void) setCrew:(NSArray *)crewArray
 {
-	if (isUnpiloted) 
+	if ([self isExplicitlyUnpiloted])
 	{
 		//unpiloted ships cannot have crew
-		// but may have crew before isUnpiloted set, so force *that* to clear too
+		// but may have crew before isExplicitlyUnpiloted set, so force *that* to clear too
 		[crew autorelease];
 		crew = nil;
 		return;
@@ -7264,6 +7280,17 @@ NSComparisonResult ComparePlanetsBySurfaceDistance(id i1, id i2, void* context)
 	//do not set to hulk here when crew is nil (or 0).  Some things like missiles have no crew.
 	[crew autorelease];
 	crew = [crewArray copy];
+}
+
+
+- (void) setSingleCrewWithRole:(NSString *)crewRole
+{
+	if (![self isUnpiloted])
+	{
+		OOCharacter *crewMember = [OOCharacter randomCharacterWithRole:crewRole
+												 andOriginalSystemSeed:[UNIVERSE systemSeedForSystemNumber:[self homeSystem]]];
+		[self setCrew:[NSArray arrayWithObject:crewMember]];
+	}
 }
 
 
@@ -8069,15 +8096,15 @@ NSComparisonResult ComparePlanetsBySurfaceDistance(id i1, id i2, void* context)
 		for (i = 0; i < [targets count]; i++)
 		{
 			ShipEntity *e2 = (ShipEntity*)[targets objectAtIndex:i];
-			if ([e2 isShip])
+			if ([e2 isShip] && [e2 isInSpace])
 			{
 				Vector p2 = [self vectorTo:e2];
 				double ecr = [e2 collisionRadius];
 				double d2 = magnitude2(p2) - ecr * ecr;
-				while (d2 <= 0.0)
+				// limit momentum transfer to relatively sensible levels
+				if (d2 < 1.0)
 				{
-					p2 = OOVectorRandomSpatial(1.0);
-					d2 = magnitude2(p2);
+					d2 = 1.0;
 				}
 				double moment = amount*desired_range/d2;
 				[e2 addImpactMoment:vector_normal(p2) fraction:moment];
@@ -8222,6 +8249,9 @@ NSComparisonResult ComparePlanetsBySurfaceDistance(id i1, id i2, void* context)
 			limit--;
 			ShipEntity* cargoObj = [jetsam objectAtIndex:i];
 			ShipEntity* container = [UNIVERSE reifyCargoPod:cargoObj];
+			/* TODO: this debris position/velocity setting code is
+			 * duplicated - sometimes not very cleanly - all over the
+			 * place. Unify to a single function - CIM */
 			HPVector  rpos = xposition;
 			Vector	rrand = OORandomPositionInBoundingBox(boundingBox);
 			rpos.x += rrand.x;	rpos.y += rrand.y;	rpos.z += rrand.z;
@@ -8232,7 +8262,7 @@ NSComparisonResult ComparePlanetsBySurfaceDistance(id i1, id i2, void* context)
 			v.x = 0.1 *((ranrot_rand() % speed_low) - speed_low / 2);
 			v.y = 0.1 *((ranrot_rand() % speed_low) - speed_low / 2);
 			v.z = 0.1 *((ranrot_rand() % speed_low) - speed_low / 2);
-			[container setVelocity:v];
+			[container setVelocity:vector_add(v,[self velocity])];
 			quaternion_set_random(&q);
 			[container setOrientation:q];
 							
@@ -8339,76 +8369,57 @@ NSComparisonResult ComparePlanetsBySurfaceDistance(id i1, id i2, void* context)
 				[self releaseCargoPodsDebris];
 				
 				//  Throw out rocks and alloys to be scooped up
-				if ([self hasRole:@"asteroid"])
+				if ([self hasRole:@"asteroid"] || [self isBoulder])
 				{
 					if (!noRocks && (being_mined || randf() < 0.20))
 					{
-						if ([[self primaryAggressor] isPlayer])
+						NSString *defaultRole = @"boulder";
+						float defaultSpeed = 50.0;
+						if ([self isBoulder])
+						{
+							defaultRole = @"splinter";
+							defaultSpeed = 20.0;
+							if (likely_cargo == 0)
+							{
+								likely_cargo = 4; // compatibility with older boulders
+							}
+						}
+						else if ([[self primaryAggressor] isPlayer])
 						{
 							[PLAYER addRoleForMining];
 						}
 						NSUInteger n_rocks = 2 + (Ranrot() % (likely_cargo + 1));
 						
-						NSString *debrisRole = [[self shipInfoDictionary] oo_stringForKey:@"debris_role" defaultValue:@"boulder"];
+						NSString *debrisRole = [[self shipInfoDictionary] oo_stringForKey:@"debris_role" defaultValue:defaultRole];
 						for (i = 0; i < n_rocks; i++)
 						{
 							ShipEntity* rock = [UNIVERSE newShipWithRole:debrisRole];   // retain count = 1
 							if (rock)
 							{
-								HPVector  rpos = xposition;
-								int  r_speed = [rock maxFlightSpeed] > 0 ? 20.0 * [rock maxFlightSpeed] : 10;
-								int cr = (collision_radius > 10 * rock->collision_radius) ? collision_radius : 3 * rock->collision_radius;
-								rpos.x += (ranrot_rand() % cr) - cr/2;
-								rpos.y += (ranrot_rand() % cr) - cr/2;
-								rpos.z += (ranrot_rand() % cr) - cr/2;
+								float  r_speed = [rock maxFlightSpeed] > 0 ? 2.0 * [rock maxFlightSpeed] : defaultSpeed;
+								float cr = (collision_radius < rock->collision_radius) ? collision_radius : 2 * rock->collision_radius;
+								v.x = ((randf() * r_speed) - r_speed / 2);
+								v.y = ((randf() * r_speed) - r_speed / 2);
+								v.z = ((randf() * r_speed) - r_speed / 2);
+								[rock setVelocity:vector_add(v,[self velocity])];
+								HPVector rpos = HPvector_add(xposition,vectorToHPVector(vector_multiply_scalar(vector_normal(v),cr)));
 								[rock setPosition:rpos];
-								v.x = 0.1 *((ranrot_rand() % r_speed) - r_speed / 2);
-								v.y = 0.1 *((ranrot_rand() % r_speed) - r_speed / 2);
-								v.z = 0.1 *((ranrot_rand() % r_speed) - r_speed / 2);
-								[rock setVelocity:v];
+
 								quaternion_set_random(&q);
 								[rock setOrientation:q];
 								
 								[rock setTemperature:[self randomEjectaTemperature]];
-								[rock setScanClass:CLASS_ROCK];
-								[rock setIsBoulder:YES];
-								[UNIVERSE addEntity:rock];	// STATUS_IN_FLIGHT, AI state GLOBAL
-								[rock release];
-							}
-						}
-					}
-					return;
-				}
-				else if ([self isBoulder])
-				{
-					if ((being_mined)||(ranrot_rand() % 100 < 20))
-					{
-						NSUInteger n_rocks = 2 + (ranrot_rand() % 5);
-						
-						NSString *debrisRole = [[self shipInfoDictionary] oo_stringForKey:@"debris_role" defaultValue:@"splinter"];
-						for (i = 0; i < n_rocks; i++)
-						{
-							ShipEntity* rock = [UNIVERSE newShipWithRole:debrisRole];   // retain count = 1
-							if (rock)
-							{
-								HPVector  rpos = xposition;
-								int  r_speed = [rock maxFlightSpeed] > 0 ? 20.0 * [rock maxFlightSpeed] : 20;
-								int cr = (collision_radius > 10 * rock->collision_radius) ? collision_radius : 3 * rock->collision_radius;
-								rpos.x += (ranrot_rand() % cr) - cr/2;
-								rpos.y += (ranrot_rand() % cr) - cr/2;
-								rpos.z += (ranrot_rand() % cr) - cr/2;
-								[rock setPosition:rpos];
-								v.x = 0.1 *((ranrot_rand() % r_speed) - r_speed / 2);
-								v.y = 0.1 *((ranrot_rand() % r_speed) - r_speed / 2);
-								v.z = 0.1 *((ranrot_rand() % r_speed) - r_speed / 2);
-								[rock setVelocity:v];
-								quaternion_set_random(&q);
-								
-								[rock setTemperature:[self randomEjectaTemperature]];
-								[rock setBounty: 0 withReason:kOOLegalStatusReasonSetup];
-								[rock setCommodity:[UNIVERSE commodityForName:@"Minerals"] andAmount: 1];
-								[rock setOrientation:q];
-								[rock setScanClass: CLASS_CARGO];
+								if ([self isBoulder])
+								{
+									[rock setScanClass: CLASS_CARGO];
+									[rock setBounty: 0 withReason:kOOLegalStatusReasonSetup];
+									[rock setCommodity:[UNIVERSE commodityForName:@"Minerals"] andAmount: 1];
+								}
+								else
+								{
+									[rock setScanClass:CLASS_ROCK];
+									[rock setIsBoulder:YES];
+								}
 								[UNIVERSE addEntity:rock];	// STATUS_IN_FLIGHT, AI state GLOBAL
 								[rock release];
 							}
@@ -8486,7 +8497,7 @@ NSComparisonResult ComparePlanetsBySurfaceDistance(id i1, id i2, void* context)
 					v.x = 0.1 *((ranrot_rand() % speed_low) - speed_low / 2);
 					v.y = 0.1 *((ranrot_rand() % speed_low) - speed_low / 2);
 					v.z = 0.1 *((ranrot_rand() % speed_low) - speed_low / 2);
-					[plate setVelocity:v];
+					[plate setVelocity:vector_add(v,[self velocity])];
 					quaternion_set_random(&q);
 					[plate setOrientation:q];
 					
@@ -8564,6 +8575,20 @@ NSComparisonResult ComparePlanetsBySurfaceDistance(id i1, id i2, void* context)
 			}
 		}
 	}
+}
+
+
+- (void) removeExhaust:(OOExhaustPlumeEntity *)exhaust
+{
+	[subEntities removeObject:exhaust];
+	[exhaust setOwner:nil];
+}
+
+
+- (void) removeFlasher:(OOFlasherEntity *)flasher
+{
+	[subEntities removeObject:flasher];
+	[flasher setOwner:nil];
 }
 
 
@@ -8824,7 +8849,7 @@ Vector positionOffsetForShipInRotationToAlignment(ShipEntity* ship, Quaternion q
 }
 
 
-- (unsigned) randomSeedForShaders
+- (uint32_t) randomSeedForShaders
 {
 	return entity_personality * 0x00010001;
 }
@@ -10715,6 +10740,7 @@ Vector positionOffsetForShipInRotationToAlignment(ShipEntity* ship, Quaternion q
 
 	Quaternion q_save = orientation;	// save rotation
 	orientation = q_laser;			// face in direction of laser
+	// weapon offset for thargoid lasers is always zero
 	ShipEntity *victim = [UNIVERSE firstShipHitByLaserFromShip:self inDirection:WEAPON_FACING_FORWARD offset:kZeroVector gettingRangeFound:&hit_at_range];
 	[self setShipHitByLaser:victim];
 	orientation = q_save;			// restore rotation
@@ -10764,15 +10790,9 @@ Vector positionOffsetForShipInRotationToAlignment(ShipEntity* ship, Quaternion q
 }
 
 
-- (BOOL) fireLaserShotInDirection:(OOWeaponFacing)direction
+- (Vector) laserPortOffset:(OOWeaponFacing)direction
 {
-	double			range_limit2 = weaponRange * weaponRange;
-	GLfloat			hit_at_range;
-	Vector			vel = vector_multiply_scalar(v_forward, flightSpeed);
-	Vector			laserPortOffset = kZeroVector;
-
-	last_shot_time = [UNIVERSE getTime];
-
+	Vector laserPortOffset = kZeroVector;
 	switch (direction)
 	{
 		case WEAPON_FACING_FORWARD:
@@ -10792,7 +10812,19 @@ Vector positionOffsetForShipInRotationToAlignment(ShipEntity* ship, Quaternion q
 			laserPortOffset = starboardWeaponOffset;
 			break;
 	}
-	
+	return laserPortOffset;
+}
+
+
+- (BOOL) fireLaserShotInDirection:(OOWeaponFacing)direction
+{
+	double			range_limit2 = weaponRange * weaponRange;
+	GLfloat			hit_at_range;
+	Vector			vel = vector_multiply_scalar(v_forward, flightSpeed);
+	Vector			laserPortOffset = [self laserPortOffset:direction];
+
+	last_shot_time = [UNIVERSE getTime];
+
 	ShipEntity *victim = [UNIVERSE firstShipHitByLaserFromShip:self inDirection:direction offset:laserPortOffset gettingRangeFound:&hit_at_range];
 	[self setShipHitByLaser:victim];
 	
@@ -11044,6 +11076,28 @@ Vector positionOffsetForShipInRotationToAlignment(ShipEntity* ship, Quaternion q
 }
 
 
+- (Vector) missileLaunchPosition
+{
+	Vector start;
+	// default launching position
+	start.x = 0.0f;						// in the middle
+	start.y = boundingBox.min.y - 4.0f;	// 4m below bounding box
+	start.z = boundingBox.max.z + 1.0f;	// 1m ahead of bounding box
+	
+	// custom launching position
+	start = [shipinfoDictionary oo_vectorForKey:@"missile_launch_position" defaultValue:start];
+	
+	if (start.x == 0.0f && start.y == 0.0f && start.z <= 0.0f) // The kZeroVector as start is illegal also.
+	{
+		OOLog(@"ship.missileLaunch.invalidPosition", @"***** ERROR: The missile_launch_position defines a position %@ behind the %@. In future versions such missiles may explode on launch because they have to travel through the ship.", VectorDescription(start), self);
+		start.x = 0.0f;
+		start.y = boundingBox.min.y - 4.0f;
+		start.z = boundingBox.max.z + 1.0f;
+	}
+	return start;
+}
+
+
 - (ShipEntity *) fireMissile
 {
 	return [self fireMissileWithIdentifier:nil andTarget:[self primaryTarget]];
@@ -11062,21 +11116,7 @@ Vector positionOffsetForShipInRotationToAlignment(ShipEntity* ship, Quaternion q
 	
 	if ([UNIVERSE getTime] < missile_launch_time) return nil;
 
-	// default launching position
-	start.x = 0.0f;						// in the middle
-	start.y = boundingBox.min.y - 4.0f;	// 4m below bounding box
-	start.z = boundingBox.max.z + 1.0f;	// 1m ahead of bounding box
-	
-	// custom launching position
-	start = [shipinfoDictionary oo_vectorForKey:@"missile_launch_position" defaultValue:start];
-	
-	if (start.x == 0.0f && start.y == 0.0f && start.z <= 0.0f) // The kZeroVector as start is illegal also.
-	{
-		OOLog(@"ship.missileLaunch.invalidPosition", @"***** ERROR: The missile_launch_position defines a position %@ behind the %@. In future versions such missiles may explode on launch because they have to travel through the ship.", VectorDescription(start), self);
-		start.x = 0.0f;
-		start.y = boundingBox.min.y - 4.0f;
-		start.z = boundingBox.max.z + 1.0f;
-	}
+	start = [self missileLaunchPosition];
 	
 	double  throw_speed = 250.0f;
 	
@@ -11352,7 +11392,7 @@ Vector positionOffsetForShipInRotationToAlignment(ShipEntity* ship, Quaternion q
 	{
 		ShipEntity	*passenger = nil;
 		Random_Seed orig = [UNIVERSE systemSeedForSystemNumber:gen_rnd_number()];
-		passenger = [self launchPodWithCrew:[NSArray arrayWithObject:[OOCharacter randomCharacterWithRole:@"passenger" andOriginalSystem:orig]]];
+		passenger = [self launchPodWithCrew:[NSArray arrayWithObject:[OOCharacter randomCharacterWithRole:@"passenger" andOriginalSystemSeed:orig]]];
 		[passengers addObject:passenger];
 	}
 	

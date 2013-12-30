@@ -38,6 +38,9 @@ MA 02110-1301, USA.
 #import "OODebugFlags.h"
 #import "OOJSFrameCallbacks.h"
 #import "OOOpenGLExtensionManager.h"
+#import "OOOpenALController.h"
+#import "OODebugSupport.h"
+#import "legacy_random.h"
 
 #if OOLITE_MAC_OS_X
 #import "JAPersistentFileReference.h"
@@ -87,6 +90,10 @@ static GameController *sSharedController = nil;
 	{
 		last_timeInterval = [NSDate timeIntervalSinceReferenceDate];
 		delta_t = 0.01; // one hundredth of a second
+
+		// rather than seeding this with the date repeatedly, seed it
+		// once here at startup
+		ranrot_srand((uint32_t)[[NSDate date] timeIntervalSince1970]);   // reset randomiser with current time
 		
 		_splashStart = [[NSDate alloc] init];
 	}
@@ -271,7 +278,11 @@ static GameController *sSharedController = nil;
 	if (playerFileToLoad != nil)
 	{
 		[self logProgress:DESC(@"loading-player")];
-		[PLAYER loadPlayerFromFile:playerFileToLoad];
+		// fix problem with non-shader lighting when starting skips
+		// the splash screen
+		[UNIVERSE useGUILightSource:YES];
+		[UNIVERSE useGUILightSource:NO];
+		[PLAYER loadPlayerFromFile:playerFileToLoad asNew:NO];
 	}
 }
 
@@ -329,6 +340,10 @@ static GameController *sSharedController = nil;
 		}
 		
 		[UNIVERSE update:delta_t];
+		if (EXPECT_NOT([PLAYER status] == STATUS_RESTART_GAME))
+		{
+			[UNIVERSE reinitAndShowDemo:YES];
+		}
 		if (!gameIsPaused)
 		{
 			[OOSound update];
@@ -606,6 +621,8 @@ static void RemovePreference(NSString *key)
 #if OOLITE_MAC_OS_X
 	[splashProgressTextField setStringValue:message];
 	[splashProgressTextField display];
+	
+	OOProfilerPointMarker(message);
 #endif
 	if([message length] > 0)
 	{
@@ -780,6 +797,7 @@ static NSMutableArray *sMessageStack;
 	OOLog(@"gameController.exitApp",@".GNUstepDefaults synchronized.");
 	OOLoggingTerminate();
 	SDL_Quit();
+	[[OOOpenALController sharedController] shutdown];
 	exit(0);
 }
 

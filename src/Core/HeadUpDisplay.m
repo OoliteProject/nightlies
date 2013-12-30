@@ -58,7 +58,7 @@ MA 02110-1301, USA.
 #define WIDGET_INFO					0
 #define WIDGET_CACHE				1
 #define	WIDGET_SELECTOR				2
-
+#define	WIDGET_SELECTOR_NAME		3
 
 /* Convenience macros to make set-colour-or-default quicker. 'info' must be the NSDictionary and 'alpha' must be the overall alpha or these won't work */
 #define DO_SET_COLOR(t,d)		SetGLColourFromInfo(info,t,d,alpha)
@@ -262,6 +262,8 @@ OOINLINE void GLColorWithOverallAlpha(const GLfloat *color, GLfloat alpha)
 	
 	hudHidden = NO;
 	
+	_hiddenSelectors = [[NSMutableSet alloc] initWithCapacity:16];
+
 	hudUpdating = NO;
 	
 	overallAlpha = [hudinfo oo_floatForKey:@"overall_alpha" defaultValue:DEFAULT_OVERALL_ALPHA];
@@ -308,7 +310,8 @@ OOINLINE void GLColorWithOverallAlpha(const GLfloat *color, GLfloat alpha)
 	DESTROY(propertiesReticleTargetSensitive);
 	DESTROY(_crosshairOverrides);
 	DESTROY(crosshairDefinition);
-	
+	DESTROY(_hiddenSelectors);
+
 	[super dealloc];
 }
 
@@ -523,6 +526,35 @@ OOINLINE void GLColorWithOverallAlpha(const GLfloat *color, GLfloat alpha)
 }
 
 
+- (BOOL) hasHidden:(NSString *)selectorName
+{
+	if (selectorName == nil)
+	{
+		return NO;
+	}
+	return [_hiddenSelectors containsObject:selectorName];
+}
+
+
+- (void) setHiddenSelector:(NSString *)selectorName hidden:(BOOL)hide
+{
+	if (hide)
+	{
+		[_hiddenSelectors addObject:selectorName];
+	}
+	else
+	{
+		[_hiddenSelectors removeObject:selectorName];
+	}
+}
+
+
+- (void) clearHiddenSelectors
+{
+	[_hiddenSelectors removeAllObjects];
+}
+
+
 - (BOOL) isCompassActive
 {
 	return _compassActive;
@@ -638,9 +670,9 @@ OOINLINE void GLColorWithOverallAlpha(const GLfloat *color, GLfloat alpha)
 	// valid dial, now prefetch data
 	struct CachedInfo cache;
 	prefetchData(info, &cache);
-	// add WIDGET_INFO, WIDGET_CACHE, WIDGET_SELECTOR to array
+	// add WIDGET_INFO, WIDGET_CACHE, WIDGET_SELECTOR, WIDGET_SELECTOR_NAME to array
 	[dialArray addObject:[NSArray arrayWithObjects:info, [NSValue valueWithBytes:&cache objCType:@encode(struct CachedInfo)],
-								[NSValue valueWithPointer:selector], nil]];
+						 [NSValue valueWithPointer:selector], selectorString, nil]];
 }
 
 
@@ -902,6 +934,12 @@ OOINLINE void GLColorWithOverallAlpha(const GLfloat *color, GLfloat alpha)
 		}
 	}
 
+	// check association with hidden dials
+	if ([self hasHidden:[info oo_stringForKey:DIAL_REQUIRED_KEY defaultValue:nil]])
+	{
+		return;
+	}
+
 	OOTextureSprite				*legendSprite = nil;
 	NSString					*legendText = nil;
 	float						x, y;
@@ -962,6 +1000,11 @@ OOINLINE void GLColorWithOverallAlpha(const GLfloat *color, GLfloat alpha)
 		}
 	}
 
+	if (EXPECT_NOT([self hasHidden:[sCurrentDrawItem objectAtIndex:WIDGET_SELECTOR_NAME]]))
+	{
+		return;
+	}
+
 	// use the selector value stored during init.
 	[self performSelector:[(NSValue *)[sCurrentDrawItem objectAtIndex:WIDGET_SELECTOR] pointerValue] withObject:info];
 	OOCheckOpenGLErrors(@"HeadUpDisplay after drawHUDItem %@", info);
@@ -972,9 +1015,7 @@ OOINLINE void GLColorWithOverallAlpha(const GLfloat *color, GLfloat alpha)
 
 - (BOOL) checkPlayerInFlight
 {
-	OOEntityStatus status = [PLAYER status];
-	
-	return ((status == STATUS_IN_FLIGHT)||(status == STATUS_AUTOPILOT_ENGAGED)||(status == STATUS_LAUNCHING)||(status == STATUS_WITCHSPACE_COUNTDOWN));
+	return [PLAYER isInSpace] && [PLAYER status] != STATUS_DOCKING;
 }
 
 
@@ -1466,68 +1507,9 @@ static void prefetchData(NSDictionary *info, struct CachedInfo *data)
 	OOGLEND();
 	OOGL(GLScaledLineWidth(lineWidth));	// thinner
 	
-	OOSunEntity		*the_sun = [UNIVERSE sun];
-	OOPlanetEntity	*the_planet = [UNIVERSE planet];
-	StationEntity	*the_station = [UNIVERSE station];
-	Entity			*the_target = [PLAYER primaryTarget];
-	Entity <OOBeaconEntity>		*beacon = [PLAYER nextBeacon];
-	if ([self checkPlayerInFlight]		// be in the right mode
-		&& the_sun && the_planet		// and be in a system
-		&& ![the_sun goneNova])			// and the system has not been novabombed
+	if ([self checkPlayerInSystemFlight] && [PLAYER status] != STATUS_LAUNCHING) // normal system
 	{
-		Entity *reference = nil;
-		OOAegisStatus	aegis = AEGIS_NONE;
-		
-		switch ([PLAYER compassMode])
-		{
-			case COMPASS_MODE_INACTIVE:
-				break;
-			
-			case COMPASS_MODE_BASIC:
-				aegis = [PLAYER checkForAegis];
-				if ((aegis == AEGIS_CLOSE_TO_MAIN_PLANET || aegis == AEGIS_IN_DOCKING_RANGE) && the_station)
-				{
-					reference = the_station;
-				}
-				else
-				{
-					reference = the_planet;
-				}
-				break;
-				
-			case COMPASS_MODE_PLANET:
-				reference = the_planet;
-				break;
-				
-			case COMPASS_MODE_STATION:
-				reference = the_station;
-				break;
-				
-			case COMPASS_MODE_SUN:
-				reference = the_sun;
-				break;
-				
-			case COMPASS_MODE_TARGET:
-				reference = the_target;
-				break;
-				
-			case COMPASS_MODE_BEACONS:
-				reference = beacon;
-				break;
-		}
-		
-		if (reference == nil || [reference status] < STATUS_ACTIVE || [reference status] == STATUS_IN_HOLD)
-		{
-			[PLAYER setCompassMode:COMPASS_MODE_PLANET];
-			reference = the_planet;
-		}
-		
-		if (EXPECT_NOT(!_compassActive || reference != [PLAYER compassTarget]))
-		{
-			_compassActive = YES;
-			[PLAYER setCompassTarget:reference];
-			[PLAYER doScriptEvent:OOJSID("compassTargetChanged") withArguments:[NSArray arrayWithObjects:reference, OOStringFromCompassMode([PLAYER compassMode]), nil]];
-		}
+		Entity *reference = [PLAYER compassTarget];
 		
 		// translate and rotate the view
 
@@ -1570,10 +1552,14 @@ static void prefetchData(NSDictionary *info, struct CachedInfo *data)
 				
 			case COMPASS_MODE_BEACONS:
 				[self drawCompassBeaconBlipAt:relativePosition Size:siz Alpha:alpha];
+				Entity <OOBeaconEntity>		*beacon = [PLAYER nextBeacon];
 				[[beacon beaconDrawable] oo_drawHUDBeaconIconAt:NSMakePoint(x, y) size:siz alpha:alpha z:z1];
 				break;
 		}
+		OOGL(GLScaledLineWidth(lineWidth));	// reset
+
 		_compassUpdated = YES;
+		_compassActive = YES;
 	}
 }
 
@@ -2722,6 +2708,18 @@ static OOPolygonSprite *IconForMissileRole(NSString *role)
 
 - (void) drawWeaponsOfflineText:(NSDictionary *)info
 {
+	OOViewID					viewID = [UNIVERSE viewDirection];
+
+	if (viewID == VIEW_CUSTOM ||
+		overallAlpha == 0.0f ||
+		!([PLAYER status] == STATUS_IN_FLIGHT || [PLAYER status] == STATUS_WITCHSPACE_COUNTDOWN) ||
+		[UNIVERSE displayGUI]
+		)
+	{
+		// Don't draw weapons offline text
+		return;
+	}
+
 	if (![PLAYER weaponsOnline])
 	{
 		int					x, y;
@@ -2883,6 +2881,11 @@ static OOPolygonSprite *IconForMissileRole(NSString *role)
 	OOJoystickManager	*stickHandler = [OOJoystickManager sharedStickHandler];
 	struct CachedInfo	cached;
 	
+	if (![stickHandler joystickCount])
+	{
+		return; // no need to draw if no joystick fitted
+	}
+
 	[(NSValue *)[sCurrentDrawItem objectAtIndex:WIDGET_CACHE] getValue:&cached];
 	
 	x = useDefined(cached.x, STATUS_LIGHT_CENTRE_X) + [[UNIVERSE gameView] x_offset] * cached.x0;
@@ -2910,15 +2913,14 @@ static OOPolygonSprite *IconForMissileRole(NSString *role)
 				GLColorWithOverallAlpha(lightgray_color, alpha);
 		}
 		
-		if ([stickHandler joystickCount])
-		{
-			siz.width -= _crosshairWidth * lineWidth / 2;
-			siz.height -= _crosshairWidth * lineWidth / 2;
-			GLDrawOval(x, y, z1, siz, 10);
-		}
+		siz.width -= _crosshairWidth * lineWidth / 2;
+		siz.height -= _crosshairWidth * lineWidth / 2;
+		GLDrawOval(x, y, z1, siz, 10);
 	}
 	else if (div < 1.0) // insensitive mode (shouldn't happen)
 		GLDrawFilledOval(x, y, z1, siz, 10);
+
+	OOGL(GLScaledLineWidth(lineWidth)); // reset
 }
 
 

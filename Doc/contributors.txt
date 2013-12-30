@@ -4,6 +4,7 @@ This list is in alphabetical order, and almost certainly incomplete.
 
 The Man: Giles Williams (aegidian)
 
+Kevin Anthoney (kanthoney)
 Jens Ayton (Ahruman)
 Nikos Barkas (another_commander)
 Andrey Belov (timer)
@@ -57,6 +58,7 @@ libpng: Glenn Randers-Pehrson, Andreas Dilger, Guy Eric Schalnat
 SDL - Simple DirectMedia Layer: Sam Lantinga and contributors.
 SpiderMonkey: Brendan Eich et al, Mozilla Foundation.
 LibOgg/LibVorbis: Xiph.Org Foundation.
+MiniZip: Gilles Vollant, Mathias Svensson and others
 
 
 Mac OS X-specific libraries:

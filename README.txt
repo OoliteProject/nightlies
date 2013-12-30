@@ -67,7 +67,8 @@ distros, GNUstep and SDL development libraries come prepackaged - just
 apt-get/yum install the relevant files. You may also need to install Mozilla
 Spidermonkey (libmozjs). On others you may need to build them from source. In
 particular, you need the SDL_Mixer library, which doesn't always come with the
-base SDL development kit. Then just type 'make'.
+base SDL development kit. Then just type 'make', or, if you're using GNU make,
+'make -f Makefile'.
 
 If you want to make the Linux autopackage, after getting the Autopackage
 development kit, just type 'makeinstaller', and a package file will be
@@ -78,3 +79,31 @@ deposited in the top level.
 On OS X, you can run from Xcode by clicking on the appropriate icon
 (or choosing 'Build and Run').
 On Linux/BSD/Unix, in a terminal, type 'openapp oolite'
+
+5. Git
+------
+
+The Oolite source is available from github.  Use
+
+ git clone https://OoliteProject/oolite
+
+to retrieve.  Then
+
+ git submodule update --init
+
+to fetch the various submodules.
+
+If you've cloned the source from a forked repository instead, this may
+not work - due to relative directory paths in .gitmodules, git tries
+to download the submodules from the fork instead of the original oolite
+repository.  A workaround is to copy the file .absolute_gitmodules
+onto .gitmodules, then perform the submodules init, then replace
+.gitmodules with the relative path version.  eg, on Unix:
+
+$ cp .absolute_gitmodules .gitmodules
+$ git submodule update --init
+$ git checkout -- .gitmodules
+
+You should now have access to the submodules, without git complaining
+that .gitmodules has changed or including .gitmodules in pull requests.
+

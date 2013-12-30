@@ -35,7 +35,8 @@ enum
 {
 	kOOExpandForJavaScript		= 0x00000001,
 	kOOExpandBackslashN			= 0x00000002,
-	
+	kOOExpandGoodRNG			= 0x00000004,	
+
 	kOOExpandNoOptions			= 0
 };
 typedef NSUInteger OOExpandOptions;
@@ -76,7 +77,7 @@ typedef NSUInteger OOExpandOptions;
 		  - Otherwise, if it is a whitelisted legacy script property, look it
 		    up and insert the value.
 		  The resulting string is then recursively expanded.
-	  * %H is replaced with <planetName>. If planetName is nil, a planet name
+	  * %H is replaced with <planetName>. If systemName is nil, a planet name
 		is retrieved through -[Universe getSystemName:], treating <seed> as a
 	    system seed.
 	  * %I is equivalent to "%H[planetname-derivative-suffix]".
@@ -116,7 +117,7 @@ NSString *OOExpandWithSeed(NSString *string, Random_Seed seed, NSString *systemN
 	
 	Expand a string with default options.
 	
-	Equivalent to OOExpandForSystem(string, [UNIVERSE systemSeed, nil);
+	Equivalent to OOExpandWithSeed(string, [UNIVERSE systemSeed], nil);
 */
 NSString *OOExpand(NSString *string);
 
