@@ -75,12 +75,12 @@ enum {
 	BUTTON_UNARM,
 	BUTTON_TARGETINCOMINGMISSILE,
 	BUTTON_CYCLEMISSILE,
-	BUTTON_ENERGYBOMB,
+	BUTTON_ENERGYBOMB, // now fast activate B
 	BUTTON_WEAPONSONLINETOGGLE,
 	BUTTON_ID,
 	BUTTON_ECM,
 	BUTTON_ESCAPE,
-	BUTTON_CLOAK,
+	BUTTON_CLOAK, // now fast activate A
 	BUTTON_PRECISION,
 	BUTTON_VIEWFORWARD,
 	BUTTON_VIEWAFT,
@@ -89,6 +89,7 @@ enum {
 	BUTTON_SNAPSHOT,
 	BUTTON_PREVTARGET,
 	BUTTON_NEXTTARGET,
+	BUTTON_MODEEQUIPMENT,
 	BUTTON_end
 };
 
@@ -100,9 +101,10 @@ enum {
 #define MAX_BUTTONS (MAX_REAL_BUTTONS + 4 * MAX_HATS)
 #define STICK_NOFUNCTION -1
 #define STICK_AXISUNASSIGNED -10.0
-#define STICK_PRECISIONDIV 98304 // 3 times more precise
+
+#define STICK_PRECISIONFAC 3
 #define STICK_NORMALDIV 32768
-#define STICK_PRECISIONFAC (STICK_PRECISIONDIV/STICK_NORMALDIV)
+#define STICK_PRECISIONDIV (STICK_PRECISIONFAC*STICK_NORMALDIV)
 
 #if OOLITE_MAC_OS_X
 #define STICK_DEADZONE	0.0025
@@ -126,6 +128,9 @@ enum {
 #define STICK_NUMBER @"stickNum"    // Stick number 0 to 4
 #define STICK_AXBUT  @"stickAxBt"   // Axis or button number
 #define STICK_FUNCTION @"stickFunc" // Function of axis/button
+#define STICK_DEADZONE_SETTING @"JoystickAxesDeadzone"  // Deadzone setting double 0.0 to 1.0.
+#define STICK_PRECISION_SETTING @"JoystickPrecision" // Precision mode
+#define STICK_NONLINEAR_PARAMETER @"JoystickNonlinear" // Nonlinear parameter double from 0.0 to 1.0
 // shortcut to make code more readable when using enum as key for
 // an NSDictionary
 #define ENUMKEY(x) [NSString stringWithFormat: @"%d", x]
@@ -231,6 +236,12 @@ typedef struct
 	SEL			cbSelector;
 	char		cbHardware;
 	BOOL		invertPitch;
+	double		deadzone;
+
+	// parameter for nonlinear settings.  This is a double between 0.0 and 1.0. 1.0 - nonlinear_parameter is the
+	// gradient of the transform function at zero. 0.0 means the gradient is 1.0, which makes the stick linear.
+	// Higher values reduce the stick response for more accuracy at the centre.
+	double		nonlinear_parameter;
 }
 
 + (id) sharedStickHandler;
@@ -261,6 +272,9 @@ typedef struct
 - (BOOL) getButtonState:(int)function;
 - (double) getAxisState:(int)function;
 - (double) getSensitivity;
+
+// Transform raw axis state into actual axis state
+- (double) axisTransform: (double)axisvalue;
 
 // This one just returns a pointer to the entire state array to
 // allow for multiple lookups with only one objc_sendMsg

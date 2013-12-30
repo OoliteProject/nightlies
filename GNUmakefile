@@ -2,8 +2,8 @@ include $(GNUSTEP_MAKEFILES)/common.make
 include config.make
 
 vpath %.m src/SDL:src/Core:src/Core/Entities:src/Core/Materials:src/Core/Scripting:src/Core/OXPVerifier:src/Core/Debug
-vpath %.h src/SDL:src/Core:src/Core/Entities:src/Core/Materials:src/Core/Scripting:src/Core/OXPVerifier:src/Core/Debug
-vpath %.c src/SDL:src/Core:src/BSDCompat:src/Core/Debug
+vpath %.h src/SDL:src/Core:src/Core/Entities:src/Core/Materials:src/Core/Scripting:src/Core/OXPVerifier:src/Core/Debug:src/Core/MiniZip
+vpath %.c src/SDL:src/Core:src/BSDCompat:src/Core/Debug:src/Core/MiniZip
 GNUSTEP_INSTALLATION_DIR         = $(GNUSTEP_USER_ROOT)
 ifeq ($(GNUSTEP_HOST_OS),mingw32)
     GNUSTEP_OBJ_DIR_NAME         := $(GNUSTEP_OBJ_DIR_NAME).win
@@ -23,8 +23,8 @@ ifeq ($(GNUSTEP_HOST_OS),mingw32)
     else
         JS_IMPORT_LIBRARY        = js32ECMAv5
     endif
-    ADDITIONAL_INCLUDE_DIRS      = -I$(WIN_DEPS_DIR)/include -I$(JS_INC_DIR) -Isrc/SDL -Isrc/Core -Isrc/BSDCompat -Isrc/Core/Scripting -Isrc/Core/Materials -Isrc/Core/Entities -Isrc/Core/OXPVerifier -Isrc/Core/Debug -Isrc/Core/Tables
-    ADDITIONAL_OBJC_LIBS         = -lglu32 -lopengl32 -lpng14.dll -lmingw32 -lSDLmain -lSDL -lSDL_mixer -lgnustep-base -l$(JS_IMPORT_LIBRARY) -lwinmm -mwindows
+    ADDITIONAL_INCLUDE_DIRS      = -I$(WIN_DEPS_DIR)/include -I$(JS_INC_DIR) -Isrc/SDL -Isrc/Core -Isrc/BSDCompat -Isrc/Core/Scripting -Isrc/Core/Materials -Isrc/Core/Entities -Isrc/Core/OXPVerifier -Isrc/Core/Debug -Isrc/Core/Tables -Isrc/Core/MiniZip
+    ADDITIONAL_OBJC_LIBS         = -lglu32 -lopengl32 -lopenal32.dll -lpng14.dll -lmingw32 -lSDLmain -lSDL -lvorbisfile.dll -lvorbis.dll -lz -lgnustep-base -l$(JS_IMPORT_LIBRARY) -lwinmm -mwindows
     ADDITIONAL_CFLAGS            = -DWIN32 -DNEED_STRLCPY `sdl-config --cflags` -mtune=generic
 # note the vpath stuff above isn't working for me, so adding src/SDL and src/Core explicitly
     ADDITIONAL_OBJCFLAGS         = -DLOADSAVEGUI -DWIN32 -DXP_WIN -Wno-import -std=gnu99 `sdl-config --cflags` -mtune=generic
@@ -49,11 +49,11 @@ else
     LIBJS_LIB_DIR                = $(LIBJS_ROOT)/dist/lib
     LIBJS = js_static
 
-    ADDITIONAL_INCLUDE_DIRS      = -I$(LIBJS_INC_DIR) -Isrc/SDL -Isrc/Core -Isrc/BSDCompat -Isrc/Core/Scripting -Isrc/Core/Materials -Isrc/Core/Entities -Isrc/Core/OXPVerifier -Isrc/Core/Debug -Isrc/Core/Tables
-    ADDITIONAL_OBJC_LIBS         = -lGLU -lGL -lX11 -lSDL -lSDL_mixer -lgnustep-base -l$(LIBJS) `nspr-config --libs` -lstdc++
+    ADDITIONAL_INCLUDE_DIRS      = -I$(LIBJS_INC_DIR) -Isrc/SDL -Isrc/Core -Isrc/BSDCompat -Isrc/Core/Scripting -Isrc/Core/Materials -Isrc/Core/Entities -Isrc/Core/OXPVerifier -Isrc/Core/Debug -Isrc/Core/Tables -Isrc/Core/MiniZip
+    ADDITIONAL_OBJC_LIBS         = -lGLU -lGL -lX11 -lSDL -lgnustep-base -l$(LIBJS) `nspr-config --libs` -lstdc++ -lopenal -lz -lvorbisfile
     ADDITIONAL_CFLAGS            = -Wall -DLINUX -DNEED_STRLCPY `sdl-config --cflags` `nspr-config --cflags`
     ADDITIONAL_OBJCFLAGS         = -Wall -std=c99 -DLOADSAVEGUI -DLINUX -DXP_UNIX -Wno-import `sdl-config --cflags` `nspr-config --cflags`
-    oolite_LIB_DIRS              += -L/usr/X11R6/lib/ -L$(LIBJS_LIB_DIR)
+    oolite_LIB_DIRS              += -L$(LIBJS_LIB_DIR) -L/usr/X11R6/lib/
 
     ifeq ($(use_deps),yes)
         oolite_LIB_DIRS          += -Ldeps/Linux-deps/$(HOST_ARCH)/lib_linker
@@ -147,7 +147,9 @@ oolite_C_FILES = \
     legacy_random.c \
     strlcpy.c \
     OOTCPStreamDecoder.c \
-    OOPlanetData.c
+    OOPlanetData.c \
+	ioapi.c \
+	unzip.c
 
 
 OOLITE_DEBUG_FILES = \
@@ -285,6 +287,8 @@ OOLITE_SCRIPTING_FILES = \
     OOJSDock.m \
     OOJSEntity.m \
     OOJSEquipmentInfo.m \
+    OOJSExhaustPlume.m \
+    OOJSFlasher.m \
     OOJSFunction.m \
     OOJSGlobal.m \
     OOJSInterfaceDefinition.m \
@@ -320,16 +324,30 @@ OOLITE_SCRIPTING_FILES = \
     OOJSFrameCallbacks.m \
     OOJSFont.m
 
+#OOLITE_SOUND_FILES = \
+#    OOBasicSoundReferencePoint.m \
+#    
+#    OOSDLConcreteSound.m \
+#    OOSDLSound.m \
+#    OOSDLSoundChannel.m \
+#    OOSDLSoundMixer.m \
+#    OOSoundSource.m \
+#    OOSoundSourcePool.m \
+#    SDLMusic.m
+
 OOLITE_SOUND_FILES = \
-    OOBasicSoundReferencePoint.m \
-    OOMusicController.m \
-    OOSDLConcreteSound.m \
-    OOSDLSound.m \
-    OOSDLSoundChannel.m \
-    OOSDLSoundMixer.m \
-    OOSoundSource.m \
+	OOOpenALController.m \
+	OOMusicController.m \
+	OOSoundSource.m \
     OOSoundSourcePool.m \
-    SDLMusic.m
+	OOALMusic.m \
+	OOALSound.m \
+	OOALSoundChannel.m \
+	OOALSoundMixer.m \
+    OOALSoundDecoder.m \
+	OOALBufferedSound.m \
+	OOALStreamedSound.m 
+
 
 OOLITE_UI_FILES = \
     GuiDisplayGen.m \
@@ -338,6 +356,7 @@ OOLITE_UI_FILES = \
 
 OO_UTILITY_FILES = \
     Comparison.m \
+    NSDataOOExtensions.m \
     NSDictionaryOOExtensions.m \
     NSFileManagerOOExtensions.m \
     NSMutableDictionaryOOExtensions.m \

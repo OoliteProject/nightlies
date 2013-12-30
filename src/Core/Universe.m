@@ -44,6 +44,7 @@ MA 02110-1301, USA.
 #import "OOTexture.h"
 #import "OORoleSet.h"
 #import "OOShipGroup.h"
+#import "OODebugSupport.h"
 
 #import "Octree.h"
 #import "CollisionRegion.h"
@@ -208,6 +209,7 @@ static OOComparisonResult comparePrice(id dict1, id dict2, void * context);
 
 - (void) verifyDescriptions;
 - (void) loadDescriptions;
+- (void) loadScenarios;
 
 - (void) verifyEntitySessionIDs;
 - (float) randomDistanceWithinScanner;
@@ -240,8 +242,8 @@ static GLfloat	docked_light_specular[4]	= { DOCKED_ILLUM_LEVEL, DOCKED_ILLUM_LEV
 
 
 - (id) initWithGameView:(MyOpenGLView *)inGameView
-{	
-	PlayerEntity	*player = nil;
+{
+	OOProfilerStartMarker(@"startup");
 	
 	if (gSharedUniverse != nil)
 	{
@@ -259,7 +261,9 @@ static GLfloat	docked_light_specular[4]	= { DOCKED_ILLUM_LEVEL, DOCKED_ILLUM_LEV
 	
 	NSUserDefaults *prefs = [NSUserDefaults standardUserDefaults];
 	
-	strict = [prefs oo_boolForKey:@"strict-gameplay" defaultValue:NO];
+	// prefs value no longer used - per save game but startup needs to
+	// be non-strict
+	strict = NO;
 	
 	[self setGameView:inGameView];
 	gSharedUniverse = self;
@@ -292,6 +296,9 @@ static GLfloat	docked_light_specular[4]	= { DOCKED_ILLUM_LEVEL, DOCKED_ILLUM_LEV
 	[self loadDescriptions];
 	// DESC expansion is now possible!
 	
+	// load starting saves
+	[self loadScenarios];
+
 	reducedDetail = [prefs oo_boolForKey:@"reduced-detail-graphics" defaultValue:NO];
 	autoSave = [prefs oo_boolForKey:@"autosave" defaultValue:NO];
 	wireframeGraphics = [prefs oo_boolForKey:@"wireframe-graphics" defaultValue:NO];
@@ -359,7 +366,7 @@ static GLfloat	docked_light_specular[4]	= { DOCKED_ILLUM_LEVEL, DOCKED_ILLUM_LEV
 	// set up cargopod templates
 	[self setUpCargoPods];
 
-	player = [PlayerEntity sharedPlayer];
+	PlayerEntity *player = [PlayerEntity sharedPlayer];
 	[player deferredInit];
 	[self addEntity:player];
 	
@@ -377,7 +384,11 @@ static GLfloat	docked_light_specular[4]	= { DOCKED_ILLUM_LEVEL, DOCKED_ILLUM_LEV
 	
 	[[GameController sharedController] logProgress:DESC(@"running-scripts")];
 	[player completeSetUp];
+	
+	[[GameController sharedController] logProgress:DESC(@"populating-space")];
 	[self populateNormalSpace];
+	
+	[[GameController sharedController] logProgress:OOExpandKeyRandomized(@"loading-miscellany")];
 	
 #if OO_LOCALIZATION_TOOLS
 	[self runLocalizationTools];
@@ -388,6 +399,8 @@ static GLfloat	docked_light_specular[4]	= { DOCKED_ILLUM_LEVEL, DOCKED_ILLUM_LEV
 	
 	[player startUpComplete];
 	_doingStartUp = NO;
+	
+	OOProfilerEndMarker(@"startup");
 	
 	return self;
 }
@@ -499,14 +512,21 @@ static GLfloat	docked_light_specular[4]	= { DOCKED_ILLUM_LEVEL, DOCKED_ILLUM_LEV
 	if (strict == value)  return YES;
 	
 	strict = !!value;
-	[[NSUserDefaults standardUserDefaults] setBool:strict forKey:@"strict-gameplay"];
 	return [self reinitAndShowDemo:!saveGame strictChanged:YES];
 }
 
 
 - (void) reinitAndShowDemo:(BOOL) showDemo
 {
-	[self reinitAndShowDemo:showDemo strictChanged:NO];
+	if (strict && showDemo)
+	{
+		[self setStrict:NO];
+		[self reinitAndShowDemo:showDemo strictChanged:YES];
+	}
+	else
+	{
+		[self reinitAndShowDemo:showDemo strictChanged:NO];
+	}
 }
 
 
@@ -595,7 +615,6 @@ static GLfloat	docked_light_specular[4]	= { DOCKED_ILLUM_LEVEL, DOCKED_ILLUM_LEV
 		
 		[self allShipsDoScriptEvent:OOJSID("playerWillEnterWitchspace") andReactToAIMessage:@"PLAYER WITCHSPACE"];
 
-		ranrot_srand((unsigned int)[[NSDate date] timeIntervalSince1970]);	// seed randomiser by time
 		[player setRandom_factor:(ranrot_rand() & 255)];						// random factor for market values is reset
 
 // misjump on wormhole sets correct travel time if needed
@@ -838,7 +857,6 @@ static GLfloat	docked_light_specular[4]	= { DOCKED_ILLUM_LEVEL, DOCKED_ILLUM_LEV
 	[thing release];
 	
 	[self setLighting];	// also sets initial lights positions.
-	ranrot_srand([[NSDate date] timeIntervalSince1970]);   // reset randomiser with current time
 	
 	OOLog(kOOLogUniversePopulateWitchspace, @"Populating witchspace ...");
 	OOLogIndentIf(kOOLogUniversePopulateWitchspace);
@@ -1187,7 +1205,6 @@ static GLfloat	docked_light_specular[4]	= { DOCKED_ILLUM_LEVEL, DOCKED_ILLUM_LEV
 	cachedPlanet = a_planet;
 	cachedStation = a_station;
 	closeSystems = nil;
-	ranrot_srand([[NSDate date] timeIntervalSince1970]);   // reset randomiser with current time
 	OO_DEBUG_POP_PROGRESS();
 	
 	
@@ -1300,7 +1317,7 @@ static GLfloat	docked_light_specular[4]	= { DOCKED_ILLUM_LEVEL, DOCKED_ILLUM_LEV
 	NSEnumerator *enumerator = [[blocks sortedArrayUsingFunction:populatorPrioritySort context:nil] objectEnumerator];
 	NSDictionary *populator = nil;
 	HPVector location = kZeroHPVector;
-	unsigned i, locationSeed, groupCount, rndvalue;
+	uint32_t i, locationSeed, groupCount, rndvalue;
 	RANROTSeed rndcache = RANROTGetFullSeed();
 	RANROTSeed rndlocal = RANROTGetFullSeed();
 	NSString *locationCode = nil;
@@ -1308,6 +1325,11 @@ static GLfloat	docked_light_specular[4]	= { DOCKED_ILLUM_LEVEL, DOCKED_ILLUM_LEV
 	while ((populator = [enumerator nextObject]))
 	{
 		deterministic_population = [populator oo_boolForKey:@"deterministic" defaultValue:NO];
+		if (EXPECT_NOT(sun == nil || planet == nil))
+		{
+			// needs to be a non-nova system, and not interstellar space
+			deterministic_population = NO;
+		}
 
 		locationSeed = [populator oo_unsignedIntForKey:@"locationSeed" defaultValue:0];
 		groupCount = [populator oo_unsignedIntForKey:@"groupCount" defaultValue:1];
@@ -1337,7 +1359,7 @@ static GLfloat	docked_light_specular[4]	= { DOCKED_ILLUM_LEVEL, DOCKED_ILLUM_LEV
 				{
 					// not fixed coordinates and not seeded RNG; can't
 					// be deterministic
-					deterministic_population = false;
+					deterministic_population = NO;
 				}
 				if (sun == nil || planet == nil)
 				{
@@ -1614,11 +1636,13 @@ static GLfloat	docked_light_specular[4]	= { DOCKED_ILLUM_LEVEL, DOCKED_ILLUM_LEV
 		[ship setPosition:launchPos];	// minimise 'lollipop flash'
 		
 		// Deal with scripted cargopods and ensure they are filled with something.
-		if ([ship hasRole:@"cargopod"]) [self fillCargopodWithRandomCargo:ship];
-		if (![ship crew] && ![ship isUnpiloted] && !([ship scanClass] == CLASS_CARGO || [ship scanClass] == CLASS_ROCK))
+		if ([ship hasRole:@"cargopod"])  [self fillCargopodWithRandomCargo:ship];
+		
+		// Ensure piloted ships have pilots.
+		if (![ship crew] && ![ship isUnpiloted])
 			[ship setCrew:[NSArray arrayWithObject:
 						   [OOCharacter randomCharacterWithRole:desc
-											  andOriginalSystem:systems[Ranrot() & 255]]]];
+											  andOriginalSystemSeed:systems[Ranrot() & 255]]]];
 		
 		if ([ship scanClass] == CLASS_NOT_SET)
 		{
@@ -2204,10 +2228,10 @@ static GLfloat	docked_light_specular[4]	= { DOCKED_ILLUM_LEVEL, DOCKED_ILLUM_LEV
 			[ship setCargoFlag: CARGO_FLAG_PIRATE];
 			[ship setBounty: (Ranrot() & 7) + (Ranrot() & 7) + ((randf() < 0.05)? 63 : 23) withReason:kOOLegalStatusReasonSetup];	// they already have a price on their heads
 		}
-		if (![ship crew] && ![ship isUnpiloted] && !([ship scanClass] == CLASS_CARGO || [ship scanClass] == CLASS_ROCK))
+		if ([ship crew] == nil && ![ship isUnpiloted])
 			[ship setCrew:[NSArray arrayWithObject:
 				[OOCharacter randomCharacterWithRole:role
-				andOriginalSystem: systems[Ranrot() & 255]]]];
+				andOriginalSystemSeed: systems[Ranrot() & 255]]]];
 		// The following is set inside leaveWitchspace: AI state GLOBAL, STATUS_EXITING_WITCHSPACE, ai message: EXITED_WITCHSPACE, then STATUS_IN_FLIGHT
 		[ship leaveWitchspace];
 		[ship release];
@@ -2296,11 +2320,11 @@ static GLfloat	docked_light_specular[4]	= { DOCKED_ILLUM_LEVEL, DOCKED_ILLUM_LEV
 			[ship setScanClass:scanClass];
 		}
 		
-		if (!(scanClass == CLASS_CARGO || scanClass == CLASS_ROCK) && ![ship crew] && ![ship isUnpiloted])
+		if ([ship crew] == nil && ![ship isUnpiloted])
 		{
 			[ship setCrew:[NSArray arrayWithObject:
 				[OOCharacter randomCharacterWithRole:role
-				andOriginalSystem:systems[Ranrot() & 255]]]];
+				andOriginalSystemSeed:systems[Ranrot() & 255]]]];
 		}
 		
 		[ship setOrientation:OORandomQuaternion()];
@@ -2662,13 +2686,13 @@ static GLfloat	docked_light_specular[4]	= { DOCKED_ILLUM_LEVEL, DOCKED_ILLUM_LEV
 
 - (void) handleGameOver
 {
-	if ([[self gameController] playerFileToLoad])
+  if ([[self gameController] playerFileToLoad])
   {
     [[self gameController] loadPlayerIfRequired];
   }
   else
   {
-    [self reinitAndShowDemo:NO];
+    [self reinitAndShowDemo:YES];
   } 
 }
 
@@ -3401,14 +3425,14 @@ static BOOL IsFriendlyStationPredicate(Entity *entity, void *parameter)
 	OOCargoQuantity co_amount = [UNIVERSE getRandomAmountOfCommodity:co_type];
 	if (randf() < 0.5) // stops OXP monopolising pods for commodities
 	{
-		container = [UNIVERSE newShipWithRole: [UNIVERSE symbolicNameForCommodity:co_type]]; 
+		container = [UNIVERSE newShipWithRole: [UNIVERSE symbolicNameForCommodity:co_type]]; // newShipWithRole returns retained object
 	}
 	if (container == nil)
 	{
 		container = [UNIVERSE newShipWithRole:@"cargopod"]; 
 	}
 	[container setCommodity:co_type andAmount:co_amount];
-	return container;
+	return [container autorelease];
 }
 
 
@@ -4343,8 +4367,13 @@ static const OOMatrix	starboard_matrix =
 				sPrevHudAlpha = -1.0f;
 			}
 			
-			if (v_status != STATUS_DEAD && v_status != STATUS_ESCAPE_SEQUENCE)
-			{
+			switch (v_status) {
+			case STATUS_DEAD:
+			case STATUS_ESCAPE_SEQUENCE:
+			case STATUS_START_GAME:
+				// no HUD rendering in these modes
+				break;
+			default:
 				[theHUD setLineWidth:lineWidth];
 				[theHUD renderHUD];
 			}
@@ -4773,6 +4802,10 @@ static BOOL MaintainLinkedLists(Universe *uni)
 		if ([entity isStation])
 		{
 			[allStations removeObject:entity];
+			if ([PLAYER getTargetDockStation] == entity)
+			{
+				[PLAYER setDockingClearanceStatus:DOCKING_CLEARANCE_STATUS_NONE];
+			}
 		}
 		return [self doRemoveEntity:entity];
 	}
@@ -5312,31 +5345,38 @@ static BOOL MaintainLinkedLists(Universe *uni)
 - (Entity *) firstEntityTargetedByPlayerPrecisely
 {
 	OOWeaponFacing targetFacing;
-	
+	Vector laserPortOffset = kZeroVector;
+	PlayerEntity *player = PLAYER;
+
 	switch (viewDirection)
 	{
 		case VIEW_FORWARD:
 			targetFacing = WEAPON_FACING_FORWARD;
+			laserPortOffset = [player forwardWeaponOffset];
 			break;
 			
 		case VIEW_AFT:
 			targetFacing = WEAPON_FACING_AFT;
+			laserPortOffset = [player aftWeaponOffset];
 			break;
 			
 		case VIEW_PORT:
 			targetFacing = WEAPON_FACING_PORT;
+			laserPortOffset = [player portWeaponOffset];
 			break;
 			
 		case VIEW_STARBOARD:
 			targetFacing = WEAPON_FACING_STARBOARD;
+			laserPortOffset = [player starboardWeaponOffset];
 			break;
 			
 		default:
 			// Match behaviour of -firstEntityTargetedByPlayer.
 			targetFacing = WEAPON_FACING_FORWARD;
+			laserPortOffset = [player forwardWeaponOffset];
 	}
 	
-	return [self firstShipHitByLaserFromShip:PLAYER inDirection:targetFacing offset:kZeroVector gettingRangeFound:NULL];
+	return [self firstShipHitByLaserFromShip:PLAYER inDirection:targetFacing offset:laserPortOffset gettingRangeFound:NULL];
 }
 
 
@@ -6042,6 +6082,10 @@ OOINLINE BOOL EntityInRange(HPVector p1, Entity *e2, float range)
 
 - (void) repopulateSystem
 {
+	if (EXPECT_NOT([PLAYER status] == STATUS_START_GAME))
+	{
+		return; // no need to be adding ships as this is not a "real" game
+	}
 	JSContext			*context = OOJSAcquireContext();
 	[PLAYER doWorldScriptEvent:OOJSIDFromString(system_repopulator) inContext:context withArguments:NULL count:0 timeLimit:kOOJSLongTimeLimit];
 	OOJSRelinquishContext(context);
@@ -7065,6 +7109,20 @@ static void VerifyDesc(NSString *key, id desc)
 {
 	[_descriptions autorelease];
 	_descriptions = [[ResourceManager dictionaryFromFilesNamed:@"descriptions.plist" inFolder:@"Config" andMerge:YES] retain];
+	[self verifyDescriptions];
+}
+
+
+- (NSArray *) scenarios
+{
+	return _scenarios;
+}
+
+
+- (void) loadScenarios
+{
+	[_scenarios autorelease];
+	_scenarios = [[ResourceManager arrayFromFilesNamed:@"scenarios.plist" inFolder:@"Config" andMerge:YES] retain];
 	[self verifyDescriptions];
 }
 
@@ -8299,15 +8357,11 @@ static NSMutableDictionary	*sCachedSystemData = nil;
 - (Random_Seed) marketSeed
 {
 	Random_Seed		ret = system_seed;
-	int random_factor = [PLAYER clockTime];
-	
-	// ship sold time is generated by ship_seed.a << 16 + ship_seed.b << 8 + ship_seed.c
-	// added to (long)(current_time + 0x800000) & 0xffffffffff000000
-	// market changes more or less every 97 days.
-	random_factor = (random_factor >> 24) &0xff;
 	
 	// adjust basic seed by market random factor
-	ret.f ^= random_factor;	// XOR back to front
+	// which for (very bad) historical reasons is 0x80
+
+	ret.f ^= 0x80;	// XOR back to front
 	ret.e ^= ret.f;	// XOR
 	ret.d ^= ret.e;	// XOR
 	ret.c ^= ret.d;	// XOR
@@ -8382,6 +8436,7 @@ static NSMutableDictionary	*sCachedSystemData = nil;
 
 - (NSArray *) shipsForSaleForSystem:(Random_Seed)s_seed withTL:(OOTechLevelID)specialTL atTime:(OOTimeAbsolute)current_time
 {
+	RANROTSeed saved_seed = RANROTGetFullSeed();
 	Random_Seed ship_seed = [self marketSeed];
 	
 	NSMutableDictionary		*resultDictionary = [NSMutableDictionary dictionary];
@@ -8473,7 +8528,7 @@ static NSMutableDictionary	*sCachedSystemData = nil;
 		
 		// seed random number generator
 		int super_rand1 = ship_seed.a * 0x10000 + ship_seed.c * 0x100 + ship_seed.e;
-		int super_rand2 = ship_seed.b * 0x10000 + ship_seed.d * 0x100 + ship_seed.f;
+		uint32_t super_rand2 = ship_seed.b * 0x10000 + ship_seed.d * 0x100 + ship_seed.f;
 		ranrot_srand(super_rand2);
 		
 		NSDictionary* ship_base_dict = nil;
@@ -8817,6 +8872,8 @@ static NSMutableDictionary	*sCachedSystemData = nil;
 		}
 	}
 	
+	RANROTSetFullSeed(saved_seed);
+
 	return [NSArray arrayWithArray:resultArray];
 }
 
@@ -9823,7 +9880,6 @@ static OOComparisonResult comparePrice(id dict1, id dict2, void *context)
 	
 	if(showDemo)
 	{
-		[player setGuiToIntroFirstGo:NO];
 		[player setStatus:STATUS_START_GAME];
 	}
 	else
@@ -9832,9 +9888,18 @@ static OOComparisonResult comparePrice(id dict1, id dict2, void *context)
 	}
 	
 	[player completeSetUp];
-	[self populateNormalSpace];
+	if(showDemo)
+	{
+		[player setGuiToIntroFirstGo:YES];
+	}
+	else
+	{
+		// no need to do these if showing the demo as the only way out
+		// now is to load a game
+		[self populateNormalSpace];
 
-	[player startUpComplete];
+		[player startUpComplete];
+	}
 
 	if(!showDemo)
 	{

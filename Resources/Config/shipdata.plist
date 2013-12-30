@@ -530,12 +530,20 @@
 		heat_insulation = 5;
 		is_template = 1;
 		likely_cargo = 4;
+		materials =
+		{
+			"oolite_asteroid_diffuse.png" =
+			{
+				shininess = 7;
+				specular_color = (0.3, 0.3, 0.3, 1.0);
+			};
+		};
 		max_energy = 100;
 		max_flight_pitch = 0.1;
 		max_flight_roll = 0.1;
 		max_flight_speed = 0;
 		missiles = 0;
-		model = "asteroid.dat";
+		model = "oolite_asteroid.dat";
 		name = "Asteroid";
 		roles = "asteroid";
 		scan_class = "CLASS_ROCK";
@@ -543,27 +551,28 @@
 		thrust = 0;
 		unpiloted = yes;
 		weapon_energy = 0;
+	};
+	"oolite_template_asteroid_alt" = 
+	{
+		like_ship = "oolite_template_asteroid";
+		is_template = 1;
 		materials =
 		{
-			"asteroid.png" =
+			"oolite_alt_asteroid_diffuse.png" =
 			{
-				shininess = 2;
-				specular_color = (0.1, 0.1, 0.1, 1.0);
+				shininess = 7;
+				specular_color = (0.3, 0.3, 0.3, 1.0);
 			};
 		};
+		model = "oolite_alt_asteroid.dat";
 	};
-	// Cinders are spawned as debris in post-nova systems.
-	"oolite_template_cinder" = {
-		like_ship = "oolite_template_asteroid";		
-		heat_insulation = 10000;	// Ridiculously high to survive post-nova environment.
-		roles = "cinder";
-	};
-	"oolite_template_cinder-small" =
+	"oolite_template_tutorial-asteroid" =
 	{
-		like_ship = "oolite_template_boulder";
-		heat_insulation = 10000;
+		like_ship = "oolite_template_asteroid";
 		is_template = 1;
-		roles = "cinder(0.5)";
+		energy_recharge_rate = 50; // effectively immune to pulse fire
+		name = "Training Asteroid";
+		roles = "tutorial-asteroid";
 	};
 	"oolite_template_barrel" =
 	{
@@ -908,19 +917,30 @@
 		ai_type = "dumbAI.plist";
 		bounty = 5;
 		cargo_type = "CARGO_NOT_CARGO";
+		debris_role = "splinter";
 		density = 5;
 		energy_recharge_rate = 0;
 		forward_weapon_type = "WEAPON_NONE";
 		has_ecm = no;
 		has_escape_pod = no;
 		has_scoop = no;
+		heat_insulation = 3;
 		is_template = 1;
+		likely_cargo = 4;
+		materials =
+		{
+			"oolite_boulder_diffuse.png" =
+			{
+				shininess = 7;
+				specular_color = (0.3, 0.3, 0.3, 1.0);
+			};
+		};
 		max_energy = 25;
 		max_flight_pitch = 0.5;
 		max_flight_roll = 0.5;
-		max_flight_speed = 5;
+		max_flight_speed = 50;
 		missiles = 0;
-		model = "boulder.dat";
+		model = "oolite_boulder.dat";
 		name = "Boulder";
 		roles = "boulder";
 		scan_class = "CLASS_ROCK";
@@ -928,16 +948,20 @@
 		thrust = 0;
 		unpiloted = yes;
 		weapon_energy = 0;
+	};
+	"oolite_template_boulder_alt" =
+	{
+		like_ship = "oolite_template_boulder";
+		is_template = 1;
 		materials =
 		{
-			"asteroid.png" =
+			"oolite_alt_boulder_diffuse.png" =
 			{
-				shininess = 0;
-				specular_color = (0.0, 0.0, 0.0, 1.0);
+				shininess = 7;
+				specular_color = (0.3, 0.3, 0.3, 1.0);
 			};
 		};
-		debris_role = "splinter";
-		heat_insulation = 3;
+		model = "oolite_alt_boulder.dat";
 	};
 	"oolite_template_buoy" = 
 	{
@@ -971,6 +995,18 @@
 				ambient_color = (0.75, 0.75, 0.75);
 			};
 		};
+	};
+	"oolite_template_tutorial-buoy" = 
+	{
+		like_ship = "oolite_template_buoy";
+		is_template = 1;
+		beacon = "Buoy (training)";
+		beacon_label = "Training Buoy";
+		density = 10000;
+		max_energy = 100000;
+		name = "Training Buoy";
+		roles = "oolite-tutorial-buoy";
+		thrust = 100000;
 	};
 	"oolite_template_buoy-witchpoint" = 
 	{
@@ -1022,6 +1058,35 @@
 				specular_color = (0.55, 0.58, 0.6, 1.0);
 			};
 		};
+	};
+	// Cinders are spawned as debris in post-nova systems.
+	"oolite_template_cinder" = 
+	{
+		like_ship = "oolite_template_asteroid";		
+		heat_insulation = 10000;	// Ridiculously high to survive post-nova environment.
+		is_template = 1;
+		roles = "cinder";
+	};
+	"oolite_template_cinder_alt" = 
+	{
+		like_ship = "oolite_template_asteroid_alt";		
+		heat_insulation = 10000;	// Ridiculously high to survive post-nova environment.
+		is_template = 1;
+		roles = "cinder";
+	};
+	"oolite_template_cinder-small" =
+	{
+		like_ship = "oolite_template_boulder";
+		is_template = 1;
+		heat_insulation = 10000;
+		roles = "cinder(0.5)";
+	};
+	"oolite_template_cinder-small_alt" =
+	{
+		like_ship = "oolite_template_boulder_alt";
+		is_template = 1;
+		heat_insulation = 10000;
+		roles = "cinder(0.5)";
 	};
 	"oolite_template_cloaking-device" = 
 	{
@@ -2305,6 +2370,19 @@
 		weapon_position_port = "-45.0 0.0 -13.5";
 		weapon_position_starboard = "45.0 0.0 -13.5";
 	};
+	"oolite_template_tutorial-krait" = {
+		like_ship = "oolite_template_krait";
+		is_template = 1;
+		ai_type = "oolite-tutorialFighterAI.js";
+		forward_weapon_type = "WEAPON_PULSE_LASER";
+		has_fuel_injection = 0;
+		has_scoop = 0;
+		has_shield_booster = 0;
+		has_shield_enhancer = 0;
+		name = "Training Fighter";
+		roles = "oolite-tutorial-fighter";
+		script = "oolite-tutorial-fighter.js";
+	};
 	"oolite_template_mamba" = {
 		aft_eject_position = "0.0 -9.26 -35.1";
 		ai_type = "oolite-pirateAI.js";
@@ -2902,6 +2980,7 @@
 		max_flight_speed = 1000;
 		model = "qbomb.dat";
 		name = "Quirium Cascade Mine";
+		scan_class = "CLASS_MINE";
 		roles = "energy-bomb EQ_QC_MINE";
 		thrust = 0;
 	};
@@ -3043,7 +3122,20 @@
 		weapon_position_port = "-9.0 0.0 11.5";
 		weapon_position_starboard = "9.0 0.0 11.5";
 	};
-	"oolite_template_sidewinder" = {
+	"oolite_template_tutorial-station" =
+	{
+		is_template = 1;
+		like_ship = "oolite_template_coriolis-station";
+		ai_type = "nullAI.plist";
+		is_carrier = 1;
+		market = "none";
+		name = "Training Station";
+		requires_docking_clearance = 1;
+		roles = "oolite-tutorial-station";
+		scan_class = "CLASS_STATION";
+	};
+	"oolite_template_sidewinder" = 
+	{
 		aft_eject_position = "0.0 -11.5 -22.5";
 		ai_type = "oolite-pirateAI.js";
 		auto_ai = yes;
@@ -3119,12 +3211,20 @@
 		has_escape_pod = no;
 		has_scoop = no;
 		is_template = 1;
+		materials =
+		{
+			"oolite_splinter_diffuse.png" =
+			{
+				shininess = 7;
+				specular_color = (0.3, 0.3, 0.3, 1.0);
+			};
+		};
 		max_energy = 5;
 		max_flight_pitch = 1;
 		max_flight_roll = 1;
-		max_flight_speed = 10;
+		max_flight_speed = 20;
 		missiles = 0;
-		model = "splinter.dat";
+		model = "oolite_splinter.dat";
 		name = "Splinter";
 		roles = "splinter";
 		scan_class = "CLASS_CARGO";
@@ -3132,14 +3232,12 @@
 		thrust = 0;
 		unpiloted = yes;
 		weapon_energy = 0;
-		materials =
-		{
-			"asteroid.png" =
-			{
-				shininess = 2;
-				specular_color = (0.1, 0.1, 0.1, 1.0);
-			};
-		};
+	};
+	"oolite_template_splinter_alt" = 
+	{
+		like_ship = "oolite_template_splinter";
+		is_template = 1;
+		model = "oolite_alt_splinter.dat";
 	};
 	"oolite_template_tharglet" = 
 	{
@@ -3723,8 +3821,7 @@
 	};
 	"asteroid-alternative" =
 	{
-		like_ship = "oolite_template_asteroid";
-		model = "asteroid1.dat";
+		like_ship = "oolite_template_asteroid_alt";
 	};
 	"oolite-cinder" =
 	{
@@ -3732,8 +3829,7 @@
 	};
 	"oolite-cinder-alternative" =
 	{
-		like_ship = "oolite_template_cinder";		
-		model = "asteroid1.dat";
+		like_ship = "oolite_template_cinder_alt";		
 	};
 	"oolite-cinder-small" =
 	{
@@ -3741,8 +3837,7 @@
 	};
 	"oolite-cinder-small-alternative" =
 	{
-		like_ship = "oolite_template_cinder-small";
-		model = "boulder1.dat";
+		like_ship = "oolite_template_cinder-small_alt";
 	};
 	"barrel" = {
 		like_ship = "oolite_template_barrel";
@@ -3777,8 +3872,7 @@
 	};
 	"boulder-alternative" =
 	{
-		like_ship = "oolite_template_boulder";
-		model = "boulder1.dat";
+		like_ship = "oolite_template_boulder_alt";
 	};
 	"buoy" =
 	{
@@ -3936,8 +4030,7 @@
 	};
 	"splinter-alternative" =
 	{
-		like_ship = "oolite_template_splinter";
-		model = "splinter1.dat";
+		like_ship = "oolite_template_splinter_alt";
 	};
 	"tharglet" =
 	{
@@ -3998,6 +4091,25 @@
 	{
 		like_ship = "oolite_template_wreckage-component";
 		model = "wreck5.dat";
+	};
+
+
+	/* Begin definitions for entities used in the tutorial */
+	"oolite-tutorial-asteroid" =
+	{
+		"like_ship" = "oolite_template_tutorial-asteroid";
+	};
+	"oolite-tutorial-buoy" =
+	{
+		"like_ship" = "oolite_template_tutorial-buoy";
+	};
+	"oolite-tutorial-krait" = 
+	{
+		"like_ship" = "oolite_template_tutorial-krait";
+	};
+	"oolite-tutorial-station" = 
+	{
+		"like_ship" = "oolite_template_tutorial-station";
 	};
 
 

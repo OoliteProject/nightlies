@@ -933,7 +933,7 @@ static NSString * const kOOLogEntityUpdateError				= @"entity.linkedList.update.
 }
 
 
-- (void) applyVelocity:(OOTimeDelta)delta_t;
+- (void) applyVelocity:(OOTimeDelta)delta_t
 {
 	position = HPvector_add(position, HPvector_multiply_scalar(vectorToHPVector(velocity), delta_t));
 }
@@ -1084,6 +1084,7 @@ static NSString * const kOOLogEntityUpdateError				= @"entity.linkedList.update.
 	case STATUS_IN_FLIGHT:
 	case STATUS_DOCKING:
 	case STATUS_LAUNCHING:
+	case STATUS_AUTOPILOT_ENGAGED:
 	case STATUS_WITCHSPACE_COUNTDOWN:
 	case STATUS_BEING_SCOOPED:
 	case STATUS_EFFECT:

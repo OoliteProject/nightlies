@@ -38,10 +38,6 @@ MA 02110-1301, USA.
 @class OOSound, OOSoundSource, OOSoundReferencePoint;
 @class OOJoystickManager, OOTexture, OOLaserShotEntity;
 
-#ifndef FEATURE_REQUEST_5496
-#define FEATURE_REQUEST_5496 1
-#endif
-
 #define ALLOW_CUSTOM_VIEWS_WHILE_PAUSED	1
 #define SCRIPT_TIMER_INTERVAL			10.0
 
@@ -105,11 +101,10 @@ enum
 	GUI_ROW_OPTIONS_QUICKSAVE,
 	GUI_ROW_OPTIONS_SAVE,
 	GUI_ROW_OPTIONS_LOAD,
-	GUI_ROW_OPTIONS_BEGIN_NEW,
 	GUI_ROW_OPTIONS_SPACER1,
 	GUI_ROW_OPTIONS_GAMEOPTIONS,
 	GUI_ROW_OPTIONS_SPACER2,
-	GUI_ROW_OPTIONS_STRICT,
+	GUI_ROW_OPTIONS_BEGIN_NEW,
 #if OOLITE_SDL
 	GUI_ROW_OPTIONS_SPACER3,
 	GUI_ROW_OPTIONS_QUIT,
@@ -126,11 +121,14 @@ enum
 	GUI_ROW_MARKET_KEY					= 1,
 	GUI_ROW_MARKET_START				= 2,
 	GUI_ROW_MARKET_CASH					= 20,
-	GUI_ROW_INTERFACES_HEADING    = 1,
-	GUI_ROW_INTERFACES_START      = 3,
+	GUI_ROW_INTERFACES_HEADING			= 1,
+	GUI_ROW_INTERFACES_START			= 3,
 	GUI_MAX_ROWS_INTERFACES				= 12,
 	GUI_ROW_INTERFACES_DETAIL			= GUI_ROW_INTERFACES_START + GUI_MAX_ROWS_INTERFACES + 1,
-	GUI_ROW_NO_INTERFACES         = 3
+	GUI_ROW_NO_INTERFACES				= 3,
+	GUI_ROW_SCENARIOS_START				= 3,
+	GUI_MAX_ROWS_SCENARIOS				= 12,
+	GUI_ROW_SCENARIOS_DETAIL			= GUI_ROW_SCENARIOS_START + GUI_MAX_ROWS_SCENARIOS + 2,
 
 };
 #if GUI_FIRST_ROW() < 0
@@ -458,9 +456,7 @@ typedef enum
 	
 	OOKeyCode				key_prime_equipment;
 	OOKeyCode				key_activate_equipment;
-#if FEATURE_REQUEST_5496
 	OOKeyCode				key_mode_equipment;
-#endif
 	OOKeyCode				key_fastactivate_equipment_a;
 	OOKeyCode				key_fastactivate_equipment_b;
 	
@@ -520,6 +516,7 @@ typedef enum
 	
 	// save-file
 	NSString				*save_path;
+	NSString				*scenarioKey;
 	
 	// position of viewports
 	Vector					forwardViewOffset, aftViewOffset, portViewOffset, starboardViewOffset;
@@ -750,6 +747,8 @@ typedef enum
 
 - (Entity *) compassTarget;
 - (void) setCompassTarget:(Entity *)value;
+- (void) validateCompassTarget;
+
 - (NSString *) compassTargetLabel;
 
 - (OOCompassMode) compassMode;
@@ -795,6 +794,7 @@ typedef enum
 
 - (OOWeaponType) weaponForFacing:(OOWeaponFacing)facing;
 - (OOWeaponType) currentWeapon;
+- (Vector) currentLaserOffset;
 
 - (void) rotateCargo;
 
@@ -805,6 +805,8 @@ typedef enum
 - (void) setJumpType:(BOOL)isGalacticJump;
 
 - (BOOL) takeInternalDamage;
+
+- (BOOL) endScenario:(NSString *)key;
 
 - (NSMutableArray *) roleWeights;
 - (void) addRoleForAggression:(ShipEntity *)victim;
@@ -858,6 +860,7 @@ typedef enum
 - (void) calculateCurrentCargo;
 - (void) setGuiToMarketScreen;
 
+- (void) setupStartScreenGui;
 - (void) setGuiToIntroFirstGo:(BOOL)justCobra;
 
 - (void) noteGUIWillChangeTo:(OOGUIScreenID)toScreen;

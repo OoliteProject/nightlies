@@ -1358,6 +1358,7 @@ this._addCourier = function(pos)
 	}
 	else
 	{
+		log(this.name,"Tried to add trader-courier but no ships of that role found - using default 'trader'");
 		var t = this._addShips("trader",1,pos,0);
 	}
 	t[0].bounty = 0;
@@ -1430,6 +1431,7 @@ this._addSmuggler = function(pos)
 	}
 	else
 	{
+		log(this.name,"Tried to add trader-smuggler but no ships of that role found - using default 'trader'");
 		var t = this._addShips("trader",1,pos,0);
 	}
 	if (t[0])
@@ -1528,6 +1530,7 @@ this._addHunterPack = function(pos,home,dest,role,returning)
 	}
 	else
 	{
+		log(this.name,"Tried to add "+role+" but no ships of that role found - using default 'hunter'");
 		var t = this._addShips("hunter",1,pos,0);
 	}
 	if (t[0])
@@ -1628,6 +1631,7 @@ this._addPirateAssistant = function(role,lead,pos)
 	}
 	else
 	{
+		log(this.name,"Tried to add "+role+" but no ships of that role found - using default 'pirate'");
 		var asst = this._addShips("pirate",1,pos,4E3);
 	}
 	asst[0].homeSystem = lead.homeSystem;
@@ -1822,6 +1826,11 @@ this._addHeavyPirateReturn = function(pos)
 
 this._addAegisRaiders = function()
 {
+	if (!this._roleExists("pirate-aegis-raider")) 
+	{
+		log(this.name,"No ships with role pirate-aegis-raider defined - skipping addition");
+		return;
+	}
 	var g = this._addGroup("pirate-aegis-raider",3+Math.floor(Math.random()*5),system.mainPlanet,3E3);
 	var gs = g.ships;
 	for (var i=0; i < gs.length ; i++)
@@ -1857,6 +1866,11 @@ this._addAssassin = function(pos)
 			role = "assassin-heavy";
 			ws = 2.8;
 		}
+	}
+	if (!this._roleExists(role)) 
+	{
+		log(this.name,"No ships with role "+role+" defined - skipping addition");
+		return;
 	}
 	var main = this._addShips(role,1,pos,0)[0];
 	if (main.autoWeapons)
@@ -2465,23 +2479,46 @@ this._weightedNearbyTradeSystem = function()
 
 /* Station selectors */
 
+this._launchReady = function(station)
+{
+	var docks = station.subEntities;
+	var space = 0;
+	for (var i=0; i<docks.length;i++)
+	{
+		if (docks[i].isDock)
+		{
+			space += 16 - docks[i].launchingQueueLength;
+		}
+	}
+//	log("station.debug",station.displayName+" has "+space +" in docking queue");
+	return (space >= 8);
+}
+
+
 // station for launching traders
 this._tradeStation = function(usemain)
 {
 	// usemain biases, but does not guarantee or forbid
-	if (usemain && Math.random() < 0.67)
+	if (usemain && Math.random() < 0.67 && this._launchReady(system.mainStation))
 	{
 		return system.mainStation;
 	}
 	var stats = system.stations;
-	var stat = system.stations[Math.floor(Math.random()*stats.length)];
-	if (stat.hasNPCTraffic)
+	var tries = 0;
+	do
 	{
-		if (stat.allegiance == "neutral" || stat.allegiance == "galcop" || stat.allegiance == "chaotic")
+		var stat = system.stations[Math.floor(Math.random()*stats.length)];
+		if (stat.hasNPCTraffic)
 		{
-			return stat;
+			if (stat.allegiance == "neutral" || stat.allegiance == "galcop" || stat.allegiance == "chaotic")
+			{
+				if (this._launchReady(stat))
+				{
+					return stat;
+				}
+			}
 		}
-	}
+	} while (tries < 5 && tries < stats.length);
 	return system.mainStation;
 }
 
@@ -2494,7 +2531,10 @@ this._pirateLaunch = function()
 	{
 		if (stat.allegiance == "pirate" || stat.allegiance == "chaotic")
 		{
-			return stat;
+			if (this._launchReady(stat))
+			{
+				return stat;
+			}
 		}
 	}
 	return system.mainPlanet;
@@ -2510,7 +2550,10 @@ this._hunterLaunch = function()
 	{
 		if (stat.allegiance == "hunter" || stat.allegiance == "galcop")
 		{
-			return stat;
+			if (this._launchReady(stat))
+			{
+				return stat;
+			}
 		}
 	}
 	return system.mainStation;
@@ -2526,7 +2569,10 @@ this._policeLaunch = function()
 	{
 		if (stat.allegiance == "galcop")
 		{
-			return stat;
+			if (this._launchReady(stat))
+			{
+				return stat;
+			}
 		}
 	}
 	return system.mainStation;
