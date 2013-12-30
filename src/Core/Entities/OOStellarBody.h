@@ -36,6 +36,10 @@ MA 02110-1301, USA.
 #define NEW_PLANETS 1
 #endif
 
+#ifndef SHADY_PLANETS
+#define SHADY_PLANETS 1
+#endif
+
 
 typedef enum
 {

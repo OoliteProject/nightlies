@@ -77,4 +77,7 @@
 		OOSTD_CUBE_MAP = 1;
 		OOSTD_HARSH_MISTRESS = 1;
 	};
+	"planet-shader-macros" =
+	{
+	};
 }

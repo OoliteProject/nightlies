@@ -4046,6 +4046,7 @@ static const OOMatrix	starboard_matrix =
 			PlayerEntity	*player = PLAYER;
 			Entity			*drawthing = nil;
 			BOOL			demoShipMode = [player showDemoShips];
+// submersible - some of the displayGUI lighting and transforms here impact shaders on F7 screen ??? 
 			
 			if (!displayGUI && wasDisplayGUI)
 			{

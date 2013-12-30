@@ -77,6 +77,8 @@ MA 02110-1301, USA.
 
 - (BOOL) setUpPlanetFromTexture:(NSString *)fileName;
 
+- (BOOL) setUpPlanetFromAtmosphereTexture:(NSString *)fileName;
+
 - (OOMaterial *) material;
 - (OOMaterial *) atmosphereMaterial;
 
