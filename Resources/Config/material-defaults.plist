@@ -36,6 +36,23 @@
 			uNormalMap = { type = texture; value = 1; };
 		};
 	};
+    "atmosphere-material" =
+	{
+		vertex_shader =  "oolite-default-atmosphere.vertex";
+		fragment_shader = "oolite-default-atmosphere.fragment";
+		uniforms =
+		{
+            uColor  = { type="vector"; value="1.0 0.0 1.0 0.5 "; };
+            uCloudMap = { type = texture; value=0; };
+            uDiffuse  = { type = texture; value=1; };
+            //Object2World = { type = binding ; asMatrix = true ;  binding="_transform";} ;
+            //fPlanetRadius = { type = binding; binding="planetRadius" ;};
+            //fAtmosRadius = "atmosphereRadius" ;
+
+			//uRadius = { type="binding"; binding = "radius"; };
+           // uClock = { binding = "clock"; };
+    	};
+	};
 	"planet-dynamic-macros" =
 	{
 		IS_OOLITE = 1;
@@ -77,4 +94,14 @@
 		OOSTD_CUBE_MAP = 1;
 		OOSTD_HARSH_MISTRESS = 1;
 	};
+
+
+    "atmos-macros" =
+    {
+		IS_OOLITE = 1;
+		OOSTD_DIFFUSE_MAP = 1;
+		OOSTD_CUBE_MAP = 1;
+		OOSTD_HARSH_MISTRESS = 1;
+		OO_USER_DEFINED_BINDINGS = 1;
+    };
 }

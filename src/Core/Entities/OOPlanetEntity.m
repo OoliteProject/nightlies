@@ -155,6 +155,7 @@ static const double kMesosphere = 10.0 * ATMOSPHERE_DEPTH;	// atmosphere effect 
 	_mesopause2 = (atmosphere) ? (kMesosphere + collision_radius) * (kMesosphere + collision_radius) : 0.0;
 	
 	_textureName = [[dict oo_stringForKey:@"texture"] retain];
+OOLog(@"submersible",@"Planet ready with drawable atmos = %@", _atmosphereDrawable );
 	[self setUpPlanetFromTexture:_textureName];
 	[_planetDrawable setRadius:collision_radius];	
 		
@@ -499,10 +500,10 @@ static OOColor *ColorWithHSBColor(Vector c)
 	
 	[_planetDrawable renderOpaqueParts];
 //#if NEW_ATMOSPHERE
-	if (_atmosphereDrawable != nil)
-	{
+//	if (_atmosphereDrawable != nil)
+//	{
 		[_atmosphereDrawable renderOpaqueParts];
-	}
+//	}
 //#endif
 	
 	if ([UNIVERSE wireframeGraphics])  OOGLWireframeModeOff();
@@ -682,11 +683,35 @@ static OOColor *ColorWithHSBColor(Vector c)
 
 			OOSingleTextureMaterial *dynamicMaterial = [[OOSingleTextureMaterial alloc] initWithName:@"dynamic" texture:atmosphere configuration:nil];
 			[_atmosphereDrawable setMaterial:dynamicMaterial];
-			[dynamicMaterial release];
-		}
+            [dynamicMaterial release];
+            
+            if (shadersOn) {
+    	        NSDictionary *macros = [materialDefaults oo_dictionaryForKey:@"planet-shader-macros"];
+                OOLog(@"submersible",@"!isMoon - shadersOn, Dynamic atmosphere %@", dynamicMaterial );
+
+                NSMutableDictionary *config = [[[materialDefaults oo_dictionaryForKey:@"atmosphere-material"] mutableCopy] autorelease];
+                [config setObject:[NSArray arrayWithObjects:atmosphere] forKey:@"_oo_texture_objects"];
+    	        OOMaterial *atmosphereMaterial = [OOShaderMaterial shaderMaterialWithName:@"atmosphere"
+								configuration:config
+								macros:macros
+					   			bindingTarget:self
+							];
+                OOLog(@"submersible",@"!isMoon - shadersOn, Shader atmosphere %@", atmosphereMaterial );
+               
+            	if (atmosphereMaterial) {
+                    [_atmosphereDrawable setMaterial:atmosphereMaterial];
+    			    // [atmosphereMaterial autorelease];
+                }
+    		}
+        }
 	}
 	else
 	{
+		if (shadersOn)
+		{
+			macros = [materialDefaults oo_dictionaryForKey:isMoon ? @"moon-dynamic-macros" : @"planet-dynamic-macros"];
+		}
+
 		if (isMoon)
 		{
 			[OOPlanetTextureGenerator generatePlanetTexture:&diffuseMap
@@ -702,13 +727,26 @@ static OOColor *ColorWithHSBColor(Vector c)
 												   withInfo:_materialParameters];
 			
 			OOSingleTextureMaterial *dynamicMaterial = [[OOSingleTextureMaterial alloc] initWithName:@"dynamic" texture:atmosphere configuration:nil];
-			[_atmosphereDrawable setMaterial:dynamicMaterial];
+
+    		NSMutableDictionary *config = [[[materialDefaults oo_dictionaryForKey:@"atmosphere-material"] mutableCopy] autorelease];
+    		[config setObject:[NSArray arrayWithObjects:diffuseMap,atmosphere,nil] forKey:@"_oo_texture_objects"];
+	        OOMaterial *atmosphereMaterial = [OOShaderMaterial shaderMaterialWithName:@"atmosphere"
+								configuration:config
+								macros:[materialDefaults oo_dictionaryForKey: @"atmos-macros"]
+					   			bindingTarget:self
+							];
+            
+        	if (atmosphereMaterial) {
+                OOLog(@"submersible",@"%@ Shader atmosphere %@", self, atmosphereMaterial );
+                [_atmosphereDrawable setMaterial:atmosphereMaterial];
+			} else {
+               OOLog(@"submersible",@"%@ Dynamic atmosphere %@",self, dynamicMaterial );
+               [_atmosphereDrawable setMaterial:dynamicMaterial];
+            }
+
 			[dynamicMaterial release];
 		}
-		if (shadersOn)
-		{
-			macros = [materialDefaults oo_dictionaryForKey:isMoon ? @"moon-dynamic-macros" : @"planet-dynamic-macros"];
-		}
+
 		textureName = @"dynamic";
 	}
 	OOMaterial *material = nil;
@@ -718,11 +756,12 @@ static OOColor *ColorWithHSBColor(Vector c)
 	{
 		NSMutableDictionary *config = [[[materialDefaults oo_dictionaryForKey:@"planet-material"] mutableCopy] autorelease];
 		[config setObject:[NSArray arrayWithObjects:diffuseMap, normalMap, nil] forKey:@"_oo_texture_objects"];
-		
 		material = [OOShaderMaterial shaderMaterialWithName:textureName
 											  configuration:config
 													 macros:macros
 											  bindingTarget:self];
+		//OOLog(@"submersible",@"%@ Dynamic Shaders %@",self, material);
+
 	}
 #endif
 	if (material == nil)
@@ -751,6 +790,22 @@ static OOColor *ColorWithHSBColor(Vector c)
 {
 	return [_atmosphereDrawable material];
 }
+
+- (float) planetRadius
+{
+       return [_planetDrawable radius];
+}
+
+- (float) atmosphereRadius
+{
+       if ([self hasAtmosphere])
+       {
+               return [_atmosphereDrawable radius];
+       }
+       return 0.0f;
+}
+
+
 
 @end
 

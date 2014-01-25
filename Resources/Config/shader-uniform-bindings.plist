@@ -21,6 +21,8 @@
 		"systemTechLevel"			= "integer";
 		"systemPopulation"			= "integer";
 		"systemProductivity"		= "integer";
+
+        "radius"                    = "float";
 	};
 	ship =
 	{

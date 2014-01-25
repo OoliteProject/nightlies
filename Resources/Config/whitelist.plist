@@ -366,7 +366,10 @@
 		"systemEconomy",		// Was systemEconomy_number
 		"systemTechLevel",		// Was systemTechLevel_number
 		"systemPopulation",		// Was systemPopulation_number
-		"systemProductivity"	// Was systemProductivity_number
+		"systemProductivity",	// Was systemProductivity_number
+        "planetRadius",               // OOPlanetEntity
+        "atmosphereRadius",     // OOPlanetEntity
+        "_transform"
 	);
 	
 	shader_ship_binding_methods =

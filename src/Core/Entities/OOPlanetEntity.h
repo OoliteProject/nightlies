@@ -83,6 +83,10 @@ MA 02110-1301, USA.
 
 - (BOOL) isFinishedLoading;
 
+- (float) planetRadius;
+
+- (float) atmosphereRadius;
+
 @end
 
 #endif	// NEW_PLANETS
