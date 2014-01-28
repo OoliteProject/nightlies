@@ -367,6 +367,7 @@
 		"systemTechLevel",		// Was systemTechLevel_number
 		"systemPopulation",		// Was systemPopulation_number
 		"systemProductivity",	// Was systemProductivity_number
+        "cameraRelativePosition",
         "planetRadius",               // OOPlanetEntity
         "atmosphereRadius",     // OOPlanetEntity
         "_transform"
