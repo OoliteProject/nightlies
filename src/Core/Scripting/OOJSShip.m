@@ -3396,6 +3396,7 @@ static JSBool ShipRequestDockingInstructions(JSContext *context, uintN argc, jsv
 	NSDictionary *dockingInstructions = [thisEnt dockingInstructions];
 	if (dockingInstructions != nil)
 	{
+                OOLog(@"submersible",@"docking instructions == %@" , dockingInstructions);
 		OOJS_RETURN_OBJECT(dockingInstructions);
 	}
 	else

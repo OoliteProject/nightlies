@@ -894,7 +894,7 @@ PriorityAIController.prototype.isAggressive = function(ship)
 
 PriorityAIController.prototype.isEscaping = function(ship)
 {
-	if (ai.getParameter("oolite_flag_continueUnlikelyPursuits") != null)
+	if (this.getParameter("oolite_flag_continueUnlikelyPursuits") != null)
 	{
 		return false;
 	}
@@ -2766,7 +2766,7 @@ PriorityAIController.prototype.behaviourDockWithStation = function()
 	{
 	case "TOO_BIG_TO_DOCK":
 	case "DOCKING_REFUSED":
-		this.ship.setParameter("oolite_dockingStation",null);
+		this.setParameter("oolite_dockingStation",null);
 		this.ship.target = null;
 		this.reconsiderNow();
 		break;
@@ -3013,6 +3013,7 @@ PriorityAIController.prototype.behaviourFleeCombat = function()
 	{
 		if (!this.__ltcache.oolite_witchspaceflee)
 		{
+			this.communicate("oolite_engageWitchspaceDriveFlee",{},2);
 			this.__ltcache.oolite_witchspaceflee = clock.seconds + 15;
 		}
 		if (this.__ltcache.oolite_witchspaceflee < clock.seconds)
@@ -3048,7 +3049,7 @@ PriorityAIController.prototype.behaviourFollowCurrentTarget = function()
 
 	if (rt.status == "STATUS_ENTERING_WITCHSPACE")
 	{
-		if (ai.getParameter("oolite_flag_witchspacePursuit"))
+		if (this.getParameter("oolite_flag_witchspacePursuit"))
 		{
 			var pos = rt.position;
 			var ws = system.wormholes;
@@ -3069,7 +3070,7 @@ PriorityAIController.prototype.behaviourFollowCurrentTarget = function()
 		{
 			this.ship.destination = this.ship.position;
 			this.ship.target = null;
-			this.ship.setParameter("oolite_rememberedTarget",null);
+			this.setParameter("oolite_rememberedTarget",null);
 		}
 	}
 	else
@@ -6249,6 +6250,8 @@ this.startUp = function()
 	this.$commsSettings.generic.generic.oolite_quiriumCascade = "Cascade! %N! Get out of here!";
 	this.$commsSettings.pirate.generic.oolite_scoopedCargo = "Ah, [oolite_goodsDescription]. We should have shaken them down for more.";
 	this.$commsSettings.generic.generic.oolite_agreeingToDumpCargo = "Have it! But please let us go!";
+	this.$commsSettings.generic.generic.oolite_engageWitchspaceDrive = "All ships, form up for witchspace jump.";
+	this.$commsSettings.generic.generic.oolite_engageWitchspaceDriveFlee = "There's too many of them! Get out of here!";
 }
 
 

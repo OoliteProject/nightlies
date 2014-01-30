@@ -588,7 +588,7 @@
 		desired_range = [dockingInstructions oo_floatForKey:@"range"];
 		if ([dockingInstructions objectForKey:@"station"])
 		{
-			StationEntity *targetStation = [[dockingInstructions objectForKey:@"station"] weakRefUnderlyingObject];
+			StationEntity *targetStation = [dockingInstructions objectForKey:@"station"];
 			if (targetStation != nil)
 			{
 				[self addTarget:targetStation];
