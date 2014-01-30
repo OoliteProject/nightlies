@@ -49,9 +49,9 @@
             fPlanetRadius = { type = binding; binding="planetRadius" ;};
             fAtmosRadius = "atmosphereRadius";
             Scattering = { type="vector"; value="0.12 0.16 0.4 0.0"; };
-            ooposition = "position";
-            orientation = "orientation";
-            cameraRelativePosition = "cameraRelativePosition";
+            ooposition = "uPosition";
+            orientation = { type="binding" ; asMatrix=true ; binding="orientation" };
+            cameraRelativePosition = "relativePosition";
 			//uRadius = { type="binding"; binding = "radius"; };
            // uClock = { binding = "clock"; };
     	};

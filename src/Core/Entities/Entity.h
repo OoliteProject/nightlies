@@ -202,6 +202,7 @@ enum OOScanClass
 - (void) setPosition:(HPVector)posn;
 - (void) setPositionX:(OOHPScalar)x y:(OOHPScalar)y z:(OOHPScalar)z;
 - (HPVector) position;
+- (Vector) uPosition;
 - (Vector) cameraRelativePosition;
 // gets a low-position relative vector
 - (Vector) vectorTo:(Entity *)entity;

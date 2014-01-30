@@ -368,6 +368,7 @@
 		"systemPopulation",		// Was systemPopulation_number
 		"systemProductivity",	// Was systemProductivity_number
         "cameraRelativePosition",
+        "uPosition",
         "planetRadius",               // OOPlanetEntity
         "atmosphereRadius",     // OOPlanetEntity
         "_transform"

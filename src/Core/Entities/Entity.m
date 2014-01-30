@@ -603,6 +603,12 @@ static NSString * const kOOLogEntityUpdateError				= @"entity.linkedList.update.
 	return position;
 }
 
+// uniform binding
+- (Vector) uPosition
+{
+    return HPVectorToVector(position);
+}
+
 - (Vector) cameraRelativePosition
 {
 	return cameraRelativePosition;
@@ -613,7 +619,9 @@ static NSString * const kOOLogEntityUpdateError				= @"entity.linkedList.update.
 // so needs to remain at OpenGL precision levels
 - (Vector) relativePosition
 {
-	return HPVectorToVector(HPvector_subtract([self position], [PLAYER position]));
+    Vector glsl_position = HPVectorToVector(HPvector_subtract([self position], [PLAYER position]));
+    OOLog( @"submersible" , @"%@ position = %@ , relativePosition == %@", self,HPVectorDescription([self position]) , VectorDescription(glsl_position) );
+	return glsl_position;
 }
 
 - (Vector) vectorTo:(Entity *)entity
