@@ -1283,7 +1283,6 @@ static JSObject *JSObjectFromNSDictionary(JSContext *context, NSDictionary *dict
 	BOOL					OK = YES;
 	NSEnumerator			*keyEnum = nil;
 	id						key = nil;
-        
 	jsval					value;
 	jsint					index;
 	
@@ -1298,11 +1297,7 @@ static JSObject *JSObjectFromNSDictionary(JSContext *context, NSDictionary *dict
 			{
 				if ([key isKindOfClass:[NSString class]] && [key length] != 0)
 				{
-					OOLog(@"submersible",@"enumerate: key == %@", key );
-                                        //OOLog(@"submersible",@"native object == %@", [dictionary objectForKey:key] );
 					value = [[dictionary objectForKey:key] oo_jsValueInContext:context];
-				        OOLog(@"submersible",@"value translated");	
-//OOLog(@"submersible",@"object for key == %@", value );
 					if (!JSVAL_IS_VOID(value))
 					{
 						OK = JS_SetPropertyById(context, result, OOJSIDFromString(key), &value);
