@@ -30,38 +30,6 @@ uniform vec4 orientation;
 uniform vec3 cameraRelativePosition;
 uniform vec3 Scattering;
 
-void TESTmain()
-{
-    float planet_ratio = fPlanetRadius / fAtmosRadius;
-
-    float ray_dist = distance( eyeVector , vVertexWorld );
-    gl_FragColor.rgb = vec3(1.0);
-    gl_FragColor.rgb = eyeVector / fAtmosRadius;
-
-    float atmos_depth = (fAtmosRadius-fPlanetRadius) / fAtmosRadius;
-
-    gl_FragColor.a = ray_dist;
-}
-void NOTmain()
-{
-    gl_FragColor.rgb = vec3(0.0);
-	//gl_FragColor.r = uColor.b ;
-//vec4 cloud = textureCube( uCloudMap ,  vCoords);
-//vec4 diffuse = textureCube( uDiffuse, vCoords );
-vec4 cloud = texture2D( uCloudMap, vTexCoords );
-vec4 diffuse = texture2D( uDiffuse,vTexCoords );
-    float fraction = fPlanetRadius / fAtmosRadius;
-    gl_FragColor.b = fraction;    
-    //gl_FragColor.r += cloud.r;
-    //gl_FragColor.r += diffuse.r;
-    gl_FragColor.r = diffuse.r;
-    
-    gl_FragColor.a = 1.0;
-}
-
-///----------------
-
-
 bool IOsphereIntersect(vec3 vPos,vec3 vRay,float Radius,inout vec3 vIntersect,inout vec3 vExit,inout float Dist) {
 	float Radius2= Radius*Radius;	
 	float tca = dot(vPos,normalize(vRay));
@@ -133,9 +101,9 @@ void main(void) {
 
 
     //MidSample = AtmosHit + ( normalize(eyeVector) * EyeDist * 0.5);
-    MidSample = vVertexObj + (-vVertexObj * 0.5 * EyeDist  );    
-    height =  length(MidSample) / fAtmosRadius ;
- 
+    MidSample = vVertexObj + (normalize(eyeVector) * 0.5 * EyeDist  );    
+    height =    length(MidSample) ;
+
     //  outColor.rgb = MidSample;
     //outColor.rgb = eyeVector/fAtmosRadius;
 
@@ -156,13 +124,15 @@ void main(void) {
     float finalOpacity = EyeDist * Occlude;
     //finalOpacity += length( gl_LightSource[1].ambient );
 
-    outColor.b = EyeDist;
-    outColor.g = Occlude;
-    outColor.r = Directional;
+    outColor.b = fOpacity;
+    //outColor.g = Occlude;
+    //outColor.r = Directional;
+    //outColor.rgb = vLightCol;
+    
     //outColor.rgb /= finalOpacity;
     //outColor.rgb = clamp( outColor.rgb , 0.0, 1.0 );
     
-    outColor.a = finalOpacity;
+    //outColor.a = finalOpacity;
     outColor.a = 1.0 ; // ;
 /*
 	vec3 vRayleigh = 2.0 * Scattering.rgb * fScatter  *  smoothstep(-0.25,.25, Occlude);

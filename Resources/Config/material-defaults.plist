@@ -45,15 +45,12 @@
             uColor  = { type="vector"; value="0.1 0.2 1.0 0.5 "; };
             uCloudMap = { type = texture; value=0; };
             uDiffuse  = { type = texture; value=1; };
-            //Object2World = { type = binding ; asMatrix = true ;  binding="_transform";} ;
             fPlanetRadius = { type = binding; binding="planetRadius" ;};
             fAtmosRadius = "atmosphereRadius";
             Scattering = { type="vector"; value="0.12 0.16 0.4 0.0"; };
             ooposition = "uPosition";
             orientation = { type="binding" ; asMatrix=true ; binding="orientation" };
             cameraRelativePosition = "relativePosition";
-			//uRadius = { type="binding"; binding = "radius"; };
-           // uClock = { binding = "clock"; };
     	};
 	};
 	"planet-dynamic-macros" =

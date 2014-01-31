@@ -52,37 +52,10 @@ uniform vec3 ooposition;
 uniform vec4 orientation;
 uniform vec3 cameraRelativePosition;
 
-void NOTmain(void)
-{
-	vCoords = gl_Vertex.xyz;
-
-    vec4 oink = orientation;
-    float planet = fPlanetRadius;
-    float atmos  = fAtmosRadius;
-
-	
-	// Build tangent basis.
-	vec3 normal = normalize(gl_NormalMatrix * gl_Normal);
-	vec3 binormal = cross(normal, gl_NormalMatrix * vec3(0, 1, 0));
-	vec3 tangent = -cross(normal, binormal);
-	
-	mat3 TBN = mat3(tangent, binormal, normal);
-	
-	vec3 eyeVector = -vec3(gl_ModelViewMatrix * gl_Vertex);
-	vEyeVector = eyeVector * TBN;
-
-	vec3 light1Vector = gl_LightSource[1].position.xyz + eyeVector;
-	vLight1Vector = light1Vector * TBN;
-	
-	vTexCoords = gl_MultiTexCoord0.st;
-    vCoords = gl_Vertex.xyz;
-	gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
-}
-
 //------------------
 
 
-bool IOsphereIntersect(vec3 vPos,vec3 vRay,float Radius,inout vec3 vIntersect,inout float Dist) {
+bool IOsphereIntersect(vec3 vPos,vec3 vRay,float Radius,inout vec3 vIntersect,inout vec3 vExit,inout float Dist) {
 	float Radius2= Radius*Radius;	
 	float tca = dot(vPos,normalize(vRay));
 	if (tca < 0.0 ) {
@@ -93,11 +66,25 @@ bool IOsphereIntersect(vec3 vPos,vec3 vRay,float Radius,inout vec3 vIntersect,in
 	if (d2 > Radius2) { 
 		return false;
 	}
+
+
 	float thc = sqrt( Radius2 - d2 );
 	float t0 = tca - thc;
 	float t1 = tca + thc;
 	Dist = thc*2.0;
-	vIntersect = vPos + vRay*t0;
+    Dist = length( t0 - t1 );
+    float tnear;
+    float tfar;
+    if ( t0 > 0.0 ) {
+        tnear = t0;	
+        tfar = t1;
+
+    } else {
+        tnear = t1;
+        tfar = t0;
+    }
+    vIntersect = vPos + tnear * vRay;
+    vExit = vPos + tfar * vRay; 
 	return true;	
 }
 
@@ -120,12 +107,12 @@ void main(void)
 	vLight1Vector = light1Vector * TBN;
 	
 	//
-	vVertexWorld = ooposition + normal * fAtmosRadius;
+	//vVertexWorld = ooposition + normal * fAtmosRadius;
 	vVertexObj   = gl_NormalMatrix * gl_Normal;
-	vSurfaceWorld = ooposition + normal * fPlanetRadius;
+	//vSurfaceWorld = ooposition + normal * fPlanetRadius;
 
     // relative position ? uniform binding
-	CameraPos = ooposition + normal * eyeVector * fAtmosRadius;
+	//CameraPos = ooposition + normal * eyeVector * fAtmosRadius;
 	
 	
 	vNormal = gl_Normal;
@@ -133,68 +120,10 @@ void main(void)
 	vLight1Pos = (ooposition - gl_LightSource[1].position.xyz) * vNormal ;
 	vTexCoords = gl_MultiTexCoord0.st;
 	gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
-//----------------------------------------------------------------------------
-/* #if OO_REDUCED_COMPLEXITY
 
 
-		vColor.rgb = vec3(0.0);
-	vec3 vLightCol = gl_LightSource[1].diffuse.rgb;
-	vec3 Hit;
-	float AtmosDist = 0.0;
-	float SurfaceDist = 0.0;
-	
-	float fObjAtmosDepth =   1.0 - ( ( fOuterRadius-fInnerRadius ) / fOuterRadius );
-	float fObjAtmosMaxDist = sqrt( 1.0 - pow( ( fOuterRadius-fInnerRadius ) / fOuterRadius, 2.0 )  ) ;
-	fObjAtmosMaxDist /= 3.14;
-	bool SurfaceHit=false;
-	bool AtmosHit=false;
-
-	if ( 
-		IOsphereIntersect(vVertexObj,eyeVector, 1.0 ,Hit,AtmosDist) == true) {
-		AtmosHit=true;
-		//AtmosDist= length(vVertexObj - Hit);		
-	}
-	if (IOsphereIntersect(vVertexObj,eyeVector, fObjAtmosDepth ,Hit,SurfaceDist) == true) {
-		SurfaceHit = true;
-		//SurfaceDist = length(vVertexObj - Hit);
-	}
-	float EyeDist;
-	if ( SurfaceHit == true ) {
-		EyeDist = ( AtmosDist - SurfaceDist );
-		//EyeDist = distance(vVertexObj,Hit);
-	} else {
-		EyeDist = AtmosDist; 
-	}
-	//float fScatter = (AtmosDist - SurfaceDist ) / fObjAtmosMaxDist;
-	float fScatter = EyeDist / fObjAtmosMaxDist;
-	float fOpacity;
-	if ( SurfaceHit == true ) {
-		fOpacity = fScatter;
-	} else {
-		fOpacity = pow( EyeDist / fObjAtmosMaxDist , 5.0 );
-	}
-	//vColor.rgb = Air*fScatter*vLightCol;
-
-	vec3 Light1Obj = (gl_LightSource[1].position.xyz -ooposition ) ;
-	float Occlude = dot(normalize(Light1Obj),vVertexObj);
-	float Directional = dot(normalize(vLight1Vector),normalize(vEyeVector));
-	Directional = 1.0 - smoothstep( -1, -0.8 , Directional );
-	Directional *= Directional;
-	Directional *=2.0;
-	Directional += 1.15;
-
-	vec3 vRayleigh = 2.0 * Scattering * fScatter  *  smoothstep(-0.25,.25, Occlude);
-	vec3 ivRayleigh = 2.0 * Scattering * fScatter  *  smoothstep(.25,-0.25, Occlude);
-	vColor.rgb += vRayleigh;
-	vLightCol -= ivRayleigh;
-	vColor.rgb += (vLightCol * fScatter * Directional );
 
 
-	//vColor.a = fScatter * Directional;
-	vColor.a = fOpacity * Directional;
-	vColor.a *= 1.0 * smoothstep(-0.35,-0.05, Occlude);
-#endif
-*/
 
 }
 
