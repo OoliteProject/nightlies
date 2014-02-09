@@ -1,58 +1,12 @@
-//#version 120
-
-/*
-	oolite-default-atmosphere.vertex
-	Default vertex shader for Oolite's NEW_PLANETS
-	
-	
-	© 2009–2013 Jens Ayton
-	
-	This program is free software; you can redistribute it and/or
-	modify it under the terms of the GNU General Public License
-	as published by the Free Software Foundation; either version 2
-	of the License, or (at your option) any later version.
-	
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
-	
-	You should have received a copy of the GNU General Public License
-	along with this program; if not, write to the Free Software
-	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
-	MA 02110-1301, USA.
-*/
-
-// No vNormal, because normal is always 0,0,1 in tangent space.
-
-
+varying	vec3			vNormal;
 varying vec3			vEyeVector;
 varying vec2			vTexCoords;
 varying vec3			vLight1Vector;
 varying vec3			vCoords;
+varying mat3			vTBN;
 
-varying vec3			CameraPos;
-
-varying vec4			vColor;
-varying vec3			vVertexWorld;
-varying vec3			vSurfaceWorld;
-varying vec3			vVertexObj;
-varying vec3			eyeVector;
-
-varying vec3			vLight1Pos;
-varying vec3			vNormal;
-
-
-//uniform vec4  uColor;
 uniform float fPlanetRadius;
 uniform float fAtmosRadius;
-//uniform mat4 Object2World;
-
-uniform vec3 ooposition;
-uniform vec4 orientation;
-uniform vec3 cameraRelativePosition;
-
-//------------------
 
 
 bool IOsphereIntersect(vec3 vPos,vec3 vRay,float Radius,inout vec3 vIntersect,inout vec3 vExit,inout float Dist) {
@@ -88,7 +42,59 @@ bool IOsphereIntersect(vec3 vPos,vec3 vRay,float Radius,inout vec3 vIntersect,in
 	return true;	
 }
 
+
+varying float cosPointEye = 0.0;
+varying float cosPointLight = 0.0; 
+varying float maxOccAngle = 0.0;
+
 void main(void)
+{
+	vCoords = vec3(0.0);//gl_Vertex.xyz;
+	
+	vNormal = normalize(gl_NormalMatrix * gl_Normal);
+	vec3 binormal = cross(vNormal, gl_NormalMatrix * vec3(0, 1, 0));
+	vec3 tangent = -cross(vNormal, binormal);
+	
+	vTBN = mat3(tangent, binormal, vNormal);
+	
+	vEyeVector = -vec3(gl_ModelViewMatrix * gl_Vertex);
+
+	vLight1Vector = gl_LightSource[1].position.xyz + vEyeVector;
+	
+	vTexCoords = gl_MultiTexCoord0.st;
+
+	gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+
+    vec3 VertexObj = gl_Normal;
+    // 
+    float d = sqrt( pow(fAtmosRadius,2.0) - pow(fPlanetRadius,2.0) );
+    float ad= fAtmosRadius - fPlanetRadius;
+    
+    // maximum angle
+    //float maxOccAngle =  ( ad / d );
+    maxOccAngle = d / fAtmosRadius;
+
+    //vCoords.r = maxOccAngle;
+    //vCoords.r = dot( normalize(VertexObj) , -normalize( vLight1Vector ) );
+
+    //vCoords.b =  dot( normalize( vec3(gl_Vertex) ) , normalize( vec3(gl_Normal) )  ); 
+                   
+    //vCoords.r = maxOccAngle;
+    vec3 Point =  vec3( gl_NormalMatrix * gl_Normal);
+    vec3 Eye =  -vec3( gl_ModelViewMatrix * gl_Vertex );
+    vec3 Light = gl_LightSource[1].position.xyz ;
+
+    cosPointEye = dot( normalize(Point) , normalize(Eye) );
+    cosPointLight = dot( normalize(Point) , normalize(Light) );
+
+    //vCoords.g = step( maxOccAngle, cosPointEye ) ; // cosPosEye;
+    //vCoords.b = abs( dot( normalize(Point) , normalize(Eye) ) );
+    //vCoords.r =  dot( normalize(Point) , normalize(Light) );
+
+}
+
+
+/*
 {
 	vCoords = gl_Vertex.xyz;
 	
@@ -108,7 +114,7 @@ void main(void)
 	
 	//
 	//vVertexWorld = ooposition + normal * fAtmosRadius;
-	vVertexObj   = gl_NormalMatrix * gl_Normal;
+	vVertexObj   = vec3(gl_ModelViewMatrix * gl_Vertex);
 	//vSurfaceWorld = ooposition + normal * fPlanetRadius;
 
     // relative position ? uniform binding
@@ -126,4 +132,4 @@ void main(void)
 
 
 }
-
+*/
