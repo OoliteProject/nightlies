@@ -45,236 +45,110 @@ bool IOsphereIntersect(vec3 vPos,vec3 vRay,float Radius,inout vec3 vIntersect,in
 }
 
 
+
+varying vec3 Point;
+varying vec3 Eye;
+varying vec3 Light;
+
 varying float cosPointEye;
 varying float cosPointLight;
 varying float maxOccAngle; 
+varying float   maxOccDistance;
+varying float   minOccDistance;
 
 void main(void) {
-    gl_FragColor.g = step( maxOccAngle , cosPointEye );// vCoords;
-    gl_FragColor.r = step( -maxOccAngle, cosPointLight);   
-     //gl_FragColor.rgb = vCoords;
-    gl_FragColor.a = 1.0;
-}
 
-void  FOOmain(void) {
-    vec3 vertexEye = normalize(vNormal) ;
-	float fObjAtmosDepth =  fPlanetRadius / fAtmosRadius ;
-    float fObjAtmosHeight = ( fAtmosRadius - fPlanetRadius ) / fAtmosRadius;
-	//float fObjAtmosMaxDist = sqrt( 1.0 - pow( ( fAtmosRadius-fPlanetRadius 
-    float dist = 0.0;
-    vec3 NearHit = vec3(0.0);
-    vec3 FarHit  = vec3(0.0);
-    gl_FragColor.rgb = vec3(1.0,0.0,1.0);
+    vec3 Near = Point;
+    vec3 Far = Point;
+    vec3 Mid = Point;
+    vec3 SampleVec = vec3(0.0);
 
-    vec3 PlanetNear = vec3(0.0);
-    vec3 PlanetFar = vec3(0.0);
-    vec3 AtmosNear = vec3(0.0);
-    vec3 AtmosFar  = vec3(0.0);
-
-    if( IOsphereIntersect( vertexEye, vEyeVector   , 0.999 ,
-                             AtmosNear , AtmosFar , dist ) == true ) {
-        gl_FragColor.b = dist;
-        // eye light angle
-        //_FragColor.r = dot(normalize(vEyeVector),normalize(vLight1Vector+vEyeVector));
-        NearHit = AtmosNear;
-        FarHit = AtmosFar;    
-        gl_FragColor.a = 0.5;
-    }
-
-    if( IOsphereIntersect( vertexEye, vEyeVector , fObjAtmosDepth, 
-                            PlanetNear , PlanetFar , dist ) == true ) {
-
-        //gl_FragColor.b = dist;
-        //gl_FragColor.g = 0.5;
-        //gl_FragColor.a = 0.8;
-        FarHit = PlanetNear;
-    } 
-    dist = distance(NearHit,FarHit);
-
-//    vec3 MidSample = gl_NormalScale * (vertexEye  + FarHit ) *0.5 ;
-    float fSamples = 5.0;
-    int   nSamples = 5;
-        
-    vec3 SampleVec = gl_NormalScale * (-normalize(vEyeVector) * dist ) / fSamples;
-
-    vec3 MidSample = gl_NormalScale * (vertexEye + ( dist * 0.5 * normalize(vEyeVector) ) );
-
-    float CollectHeight = 0.0;
-    vec3 SamplePos = vertexEye;
-    SamplePos += SampleVec*0.5;
-    for (int i=0; i<nSamples; i++) {
-        CollectHeight +=  length(SamplePos) - fObjAtmosDepth;
-        SamplePos += SampleVec;
-    }
-    //CollectHeight /= fSamples;
-
-    // gross scale of effect - distance of travel through medium
-    float EyeDistance  =  dist  * gl_NormalScale; //smoothstep( fPlanetRadius/fAtmosRadius, 1.0 , length(MidSample) );
-
-    float Height =  1.0 - length(MidSample) ; 
-    gl_FragColor.b = EyeDistance ; // abs(CollectHeight)/ fSamples;
-
-    // stable - but is in wrong space compared to MidSample
-    gl_FragColor.r =  dot(normalize(vNormal),-normalize(gl_LightSource[1].position.xyz ));
-
-    //gl_FragColor.rgb = SampleVec;
-
-    gl_FragColor.a = 1.0;
-     // gl_FragColor.r = length(MidSample) / fAtmosRadius;
-  //  gl_FragColor.b = length(NearHit - FarHit) / fAtmosRadius;
-
-}
-
-
+    float Illumination = 0.0;
+    float Opacity = 0.0;
+    float eyeDistance = 0.0;
+    float Height = 0.0;
 
 /*
-void NOTmain(void) {
-	vec3 vLightCol = gl_LightSource[1].diffuse.rgb;
-	float fObjAtmosDepth =  fPlanetRadius / fAtmosRadius ;
-    float fObjAtmosHeight = ( fAtmosRadius - fPlanetRadius ) / fAtmosRadius;
-	//float fObjAtmosMaxDist = sqrt( 1.0 - pow( ( fAtmosRadius-fPlanetRadius ) / fAtmosRadius, 2.0 )  ) ;
-	//fObjAtmosMaxDist /= 3.14;
-    float fObjAtmosMaxDist = sqrt( pow(fAtmosRadius,2.0) - pow(fPlanetRadius,2.0) ) * 2.0;
+float DensityScale = ( fAtmosRadius - fPlanetRadius   ) / fAtmosRadius ;
+float MaxDepth =  fPlanetRadius / fAtmosRadius; 
 
-    vec3 AtmosHit;
-	vec3 AtmosExitHit;
-    vec3 SurfaceHit;
-    vec3 SurfaceExitHit;
-	float AtmosDist = 0.0;
-	float SurfaceDist = 0.0;
+    if ( maxOccAngle > cosPointEye ) {
+        Far = Point - (normalize(Eye) * (1.0 -cosPointEye) );
+        
+        Mid = Point - ( normalize(Eye) * (1.0-cosPointEye)  * 0.5);
+                   
+        //Height =  smoothstep(0.0,maxOccAngle,  cosPointEye );
+        Height = distance(Near,Far);
+        Height = smoothstep(  MaxDepth, 1.0 - MaxDepth, Height ) * 3.14 * 2.0;
+        //Height = smoothstep( 0.0 , 2.0* maxOccAngle , Height);
+        //Height = dot(normalize(Mid),normalize(Light));
+        
+        //eyeDistance = smoothstep( maxOccAngle*(fPlanetRadius/fAtmosRadius), maxOccAngle, cosPointEye );
+// exp( length(Near-Far) ) / 12.5;
+        eyeDistance = distance(Near,Far);
 
-    vec4 outColor = vec4(0.0);
+        //Height = ( length( Mid ) - (fPlanetRadius / fAtmosRadius ) );
+        float Depth = 1.0 - smoothstep( fPlanetRadius/fAtmosRadius , 1.0, Height );
+        Illumination = smoothstep( -maxOccAngle, 0.0, cosPointLight);
+        Illumination += smoothstep( -maxOccAngle, 0.0, 
+                                    dot(normalize(Light),normalize(Far))
+                        );
+        Illumination *= 0.5;
+        gl_FragColor.g = Height;
 
-	float EyeDist;
-    vec3 MidSample;
-    float height;
-    outColor.rgb = vec3(0.0);        
-    vec3 FarHit;
-	if ( 
-		IOsphereIntersect(normalize(eyeVector) + vVertexObj, normalize(eyeVector), 1.0 ,AtmosHit,AtmosExitHit,AtmosDist) == true) {
- 		FarHit = AtmosExitHit;
-        EyeDist = AtmosDist / ( fObjAtmosMaxDist / fAtmosRadius );
-	    outColor.b = 1.0;
+
+    } else {
+        gl_FragColor.g = 0.15;
+        Far = Point - (normalize(Eye) *  (1.0 - cosPointEye)  );
+        Far += (normalize(Eye) * (1.0 - cosPointEye) * (1.0 - MaxDepth) );
+        eyeDistance =  length(Near-Far);
+        Mid = Point - (normalize(Eye) *  (1.0 - cosPointEye) * (eyeDistance/2.0) );
+
+        //Height = length(Far +normalize(Eye)) - MaxDepth;
+
+        Height = distance(Near,Far);
+        Height = smoothstep( DensityScale, MaxDepth, Height );
+        
+
+        Illumination = smoothstep( -maxOccAngle, 0.0, cosPointLight);
+        Illumination += smoothstep( -maxOccAngle, 0.0, 
+                                    dot(normalize(Light),normalize(Far))
+                        );
+        Illumination *= 0.5;
+        gl_FragColor.r = Height;
     }
-
-	if (IOsphereIntersect(normalize(eyeVector) + vVertexObj,normalize(eyeVector), fObjAtmosDepth ,SurfaceHit,SurfaceExitHit,SurfaceDist) == true) {
-	    FarHit = SurfaceHit;
-    	EyeDist = ( AtmosDist - SurfaceDist );
-        EyeDist /=  (fObjAtmosMaxDist / fAtmosRadius);
-        outColor.b = 0.0;
-        outColor.g = 0.5;
-    }  
-
-
-    //MidSample = AtmosHit + ( normalize(eyeVector) * EyeDist * 0.5);
-    MidSample = vVertexObj + (normalize(eyeVector) * 0.5 * EyeDist  );    
-    height =    length(MidSample);
-    float depth = ( height - fObjAtmosDepth ) * (1.0 -  fObjAtmosHeight);
-
-    //  outColor.rgb = MidSample;
-    // outColor.rgb = eyeVector/fAtmosRadius;
-
-	//float fScatter = (AtmosDist - SurfaceDist ) / fObjAtmosMaxDist;
-	float fScatter =  EyeDist;
-	float fOpacity = height;
-	
-
-
-	vec3 Light1Obj = (gl_LightSource[1].position.xyz -ooposition ) ;
-	float Occlude = dot( normalize(Light1Obj),normalize(MidSample)) ; //MidSample or vVertexOb;
-    Occlude = 0.25 + smoothstep( -0.1, 0.1 ,Occlude) *0.5 ;
-
-	float Directional = dot(normalize(Light1Obj),normalize(MidSample));
-	Directional = smoothstep( 0.0, 1.0  , -Directional );
-    //outColor.r = smoothstep(-1.0,1.0 , Directional) ;
-     
-    float finalOpacity = EyeDist * Occlude;
-    //finalOpacity += length( gl_LightSource[1].ambient );
-
-    //outColor.b = fOpacity;
-    //outColor.g = Occlude;
-    //outColor.r = Directional;
-
-    //outColor.rgb = ( height - fObjAtmosDepth ) * (1.0 -  fObjAtmosHeight);
-    
-    //outColor.rgb /= finalOpacity;
-    //outColor.rgb = clamp( outColor.rgb , 0.0, 1.0 );
-    
-    //outColor.a = finalOpacity;
-    outColor.a = 1.0 ; // ;
-//
-	vec3 vRayleigh = 2.0 * Scattering.rgb * fScatter  *  smoothstep(-0.25,.25, Occlude);
-	vec3 ivRayleigh = 2.0 * Scattering.rgb * fScatter  *  smoothstep(.25,-0.25, Occlude);
-	outColor.rgb += vRayleigh;
-	vLightCol -= ivRayleigh;
-	outColor.rgb += (vLightCol * fScatter * Directional );
-
-
-	//vColor.a = fScatter * Directional;
-	//vColor.a = fOpacity * Directional;
-    outColor.r = 1.0;
-	
-    // Blend based on degree of scattered light AND the occlusion 
-    outColor.a = fOpacity;
-    outColor.a *= Directional;
-	//outColor.a *= 1.0 * smoothstep(-0.25,0.05, Occlude);
-
- //
-    
-
-// SAMPLING
-//
-	int iSamples = 5;
-	float fSamples = 5.0;
-
-	float depthScale = fOuterRadius - fInnerRadius;
-	float EyeDist;
-	if ( SurfaceHit == true ) {
-		EyeDist = ( AtmosDist - SurfaceDist ) / 2.0;
-		//EyeDist = distance(vVertexObj,Hit);
-	} else {
-		EyeDist = AtmosDist; 
-	}
-	
-	vec3 dOffset = (-normalize(eyeVector)  * EyeDist ) / fSamples;
-
-	vec3 samplePoint = vVertexObj;
-	float fOcclude = 1.0;
-	vec3 PlanetHit;
-	float PlanetDist = 1.0;
-	vec3 Light1Obj = (gl_LightSource[1].position.xyz -ooposition ) ;
-	float fDensity = 0.0;
-// Occlusion samples
-
-	vec3 vScatter = vec3(0.0);
-
-for (int i=0;i < iSamples;i++) { 
-
-	samplePoint += dOffset;
-	fDensity +=  pow( 1 -smoothstep( fInnerRadius, fOuterRadius , length(samplePoint)*fOuterRadius  ), 2.0 );
-	float Occlude = dot(normalize(Light1Obj),samplePoint);
-	fOcclude -= smoothstep(-0.20,0.5, Occlude)/fSamples;
-	//
-
-	vec3 vRayleigh = (  Scattering * fDensity   *  smoothstep(0,1, Occlude)  )/ fSamples;
-	vec3 ivRayleigh = (  Scattering * fDensity   *  smoothstep(1,0, Occlude)  )/ fSamples;
-	vScatter += vRayleigh ;	
-	vLightCol -= ivRayleigh;
-	// Mie 
-	vScatter += ( 0.1 * vLightCol * fDensity ) / fSamples;	
-	//vScatter = vLightCol;	
-}	
-
-	fDensity /= fSamples;
-	outColor.a = fDensity * (1.0-fOcclude);
-	//vColor.a = 1.0;
-	outColor.rgb = vScatter.rgb;
-	outColor.rgb /= vColor.a;
-
-
-	gl_FragColor = outColor;	
-}
-
 */
 
+
+
+    if (  cosPointEye > maxOccAngle ) {
+        // ground
+        //Opacity  = ( exp( 1.0 - smoothstep(  maxOccAngle, 1.0 , cosPointEye ) ) - 1.0 ) / 1.71828;
+        Opacity  =1.0 - smoothstep(  maxOccAngle, 1.0 , cosPointEye );
+        Opacity = pow(Opacity,5.0);
+ 
+    } else {
+        // atmosphere
+        //gl_FragColor.g = (exp(smoothstep(  0.0 , maxOccAngle, cosPointEye ) ) -1.0 )  / 1.71828 ;
+        //gl_FragColor.g = 1.0 - clamp(gl_FragColor.g , 0.0,1.0);
+        Opacity = smoothstep(0.0,maxOccAngle,cosPointEye);        
+        Opacity = pow(Opacity,5.0);
+    }
+
+    vec3 vIllum = gl_LightSource[1].diffuse.rgb;
+
+    float fOcclude = smoothstep( -maxOccAngle, 0.0, cosPointLight);
+ 
+    vIllum *=  mix( vec3(0.8,0.42,0.1),vec3(0.1,0.25,1.0)  , fOcclude );
+    vIllum += vec3(0.5) * Opacity;
+    vIllum += gl_LightSource[1].ambient.rgb;
+    //vIllum = mix( gl_LightSource[1].ambient.rgb , vIllum, fOcclude ); 
+    gl_FragColor.rgb = vIllum;    
+    //gl_FragColor.rgb = clamp( vIllum / Opacity, 0.0,1.0);
+    //gl_FragColor.r = smoothstep( -maxOccAngle, 0.0, cosPointLight);  
+
+    Opacity *=   fOcclude;
+
+    gl_FragColor.a = Opacity;
+}
 

@@ -84,7 +84,11 @@ void main(void)
     vec3 Eye =  -vec3( gl_ModelViewMatrix * gl_Vertex );
     vec3 Light = gl_LightSource[1].position.xyz ;
 
+    // the angle the camera ray intersects the atmosphere, below maxOccAngle is a 
+    //  insersection with the planet.
     cosPointEye = dot( normalize(Point) , normalize(Eye) );
+    // the angle the Light intersects with the atmosphere, below maxOccAngle is
+    //  occlusion
     cosPointLight = dot( normalize(Point) , normalize(Light) );
 
     //vCoords.g = step( maxOccAngle, cosPointEye ) ; // cosPosEye;
