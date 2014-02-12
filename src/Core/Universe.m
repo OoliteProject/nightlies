@@ -3735,7 +3735,7 @@ static BOOL IsFriendlyStationPredicate(Entity *entity, void *parameter)
 	[result oo_setBool:wireframeGraphics forKey:@"wireframeGraphics"];
 	[result oo_setBool:doProcedurallyTexturedPlanets forKey:@"procedurallyTexturedPlanets"];
 	
-	[result setObject:OOStringFromShaderSetting([self detailLevel]) forKey:@"detailLevel"];
+	[result setObject:OOStringFromGraphicsDetail([self detailLevel]) forKey:@"detailLevel"];
 	
 	NSString *desc = @"UNDEFINED";
 	switch ([[OOMusicController sharedController] mode])
@@ -9472,12 +9472,12 @@ static OOComparisonResult comparePrice(id dict1, id dict2, void *context)
 {
 	OOGraphicsDetail old = detailLevel;
 	[self setDetailLevelDirectly:value];
-	OOLog(@"rendering.detail-level", @"Detail level set to %@.", OOStringFromGraphicsDetail(value));
 	[[NSUserDefaults standardUserDefaults] setInteger:detailLevel forKey:@"detailLevel"];
 	// if changed then reset graphics state
 	// (some items now require this even if shader on/off mode unchanged)
 	if (old != detailLevel)
 	{
+		OOLog(@"rendering.detail-level", @"Detail level set to %@.", OOStringFromGraphicsDetail(detailLevel));
 		[[OOGraphicsResetManager sharedManager] resetGraphicsState];
 	}
 
