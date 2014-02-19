@@ -206,6 +206,7 @@ MA 02110-1301, USA.
 #define TITLE_KEY				@"title"
 #define BACKGROUND_RGBA_KEY		@"background_rgba"
 #define OVERALL_ALPHA_KEY		@"overall_alpha"
+#define NONLINEAR_SCANNER		@"nonlinear_scanner"
 
 #define Z1						[(MyOpenGLView *)[[player universe] gameView] display_z]
 
@@ -263,6 +264,10 @@ MA 02110-1301, USA.
 	GLfloat				_crosshairWidth;
 	NSString			*crosshairDefinition;
 	BOOL				_compassActive;
+	
+	// Nonlinear scanner
+	BOOL			nonlinear_scanner;
+	BOOL			scanner_ultra_zoom;
 
 }
 
@@ -312,6 +317,13 @@ MA 02110-1301, USA.
 
 - (void) setLineWidth:(GLfloat)value;
 - (GLfloat) lineWidth;
+
++ (Vector) nonlinearScannerScale:(Vector) V Zoom:(GLfloat) zoom Scale:(double) scale;
+- (BOOL) nonlinearScanner;
+- (void) setNonlinearScanner: (BOOL)newValue;
+
+- (BOOL) scannerUltraZoom;
+- (void) setScannerUltraZoom: (BOOL)newValue;
 
 @end
 
