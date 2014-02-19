@@ -10,6 +10,10 @@ varying mat3			vTBN;
 uniform float fPlanetRadius;
 uniform float fAtmosRadius;
 
+uniform sampler2D uCloudMap;
+uniform sampler2D uDiffuseMap;
+
+
 
 bool IOsphereIntersect(vec3 vPos,vec3 vRay,float Radius,inout vec3 vIntersect,inout vec3 vExit,inout float Dist) {
 	float Radius2= Radius*Radius;	
@@ -44,6 +48,27 @@ bool IOsphereIntersect(vec3 vPos,vec3 vRay,float Radius,inout vec3 vIntersect,in
 	return true;	
 }
 
+/*	Approximation of atan(y/z) with quadrant rectification, scaled to -0.5..0.5 instead of -pi..pi.
+	It is assumed that the values are in range. You are not expected to understand this.
+*/
+float TexLongitude(float z, float y)
+{
+	const float	k2Pi = 6.283185307179586;
+	const float	kMagic = 0.2732395447351;	// (4 - pi) / pi
+	
+	float ratio = z / y;
+	
+	float r1 = 1.0 / ((ratio + kMagic / ratio) * k2Pi);	// Result when abs(z) >= abs(x).
+	float r2 = 0.25 * sign(ratio) - ratio / ((1.0 + kMagic * ratio * ratio) * k2Pi);  // Result when abs(z) <= abs(x).
+	
+	float result = (abs(ratio) > 1.0) ? r1 : r2;
+	
+	// Adjust for sector.
+	// Equivalent to (z < 0.0) ? ((y > 0.0) ? 0.75 : -0.25) : 0.25.
+	// Well, technically not equivalent for z < 0, y = 0, but you'll very rarely see that exact case.
+	return result + step(z, 0.0) * sign(y) * 0.5 + 0.25;
+}
+
 
 
 varying vec3 Point;
@@ -52,9 +77,17 @@ varying vec3 Light;
 
 varying float cosPointEye;
 varying float cosPointLight;
+
 varying float maxOccAngle; 
 varying float   maxOccDistance;
 varying float   minOccDistance;
+
+
+varying vec3 Sample[4];
+varying float LDist[4];
+
+varying float Distance;
+
 
 void main(void) {
 
@@ -67,10 +100,10 @@ void main(void) {
     float Opacity = 0.0;
     float eyeDistance = 0.0;
     float Height = 0.0;
-
+float MaxDepth =  fPlanetRadius / fAtmosRadius; 
 /*
 float DensityScale = ( fAtmosRadius - fPlanetRadius   ) / fAtmosRadius ;
-float MaxDepth =  fPlanetRadius / fAtmosRadius; 
+
 
     if ( maxOccAngle > cosPointEye ) {
         Far = Point - (normalize(Eye) * (1.0 -cosPointEye) );
@@ -120,35 +153,155 @@ float MaxDepth =  fPlanetRadius / fAtmosRadius;
 */
 
 
-
+float rayDepth = 0.0;
     if (  cosPointEye > maxOccAngle ) {
         // ground
         //Opacity  = ( exp( 1.0 - smoothstep(  maxOccAngle, 1.0 , cosPointEye ) ) - 1.0 ) / 1.71828;
-        Opacity  =1.0 - smoothstep(  maxOccAngle, 1.0 , cosPointEye );
-        Opacity = pow(Opacity,5.0);
+        Opacity  = smoothstep( -maxOccAngle,0.0 , -cosPointEye );
+        rayDepth = Opacity;
+        //rayDepth *= 2.0;    
+        //Opacity = pow(Opacity,5.0);
+        //Opacity = atan(Opacity);
+        gl_FragColor.g = 0.2;
  
     } else {
         // atmosphere
         //gl_FragColor.g = (exp(smoothstep(  0.0 , maxOccAngle, cosPointEye ) ) -1.0 )  / 1.71828 ;
         //gl_FragColor.g = 1.0 - clamp(gl_FragColor.g , 0.0,1.0);
         Opacity = smoothstep(0.0,maxOccAngle,cosPointEye);        
-        Opacity = pow(Opacity,5.0);
+        rayDepth = Opacity;
+        rayDepth *= 2.0;
+        //Opacity = pow(Opacity,5.0);
+        //Opacity = atan(Opacity);
+
     }
+    
+    float fSamples = 4.0;
+    int samples = int(fSamples);
+    vec3 SampleOffset = -normalize(Eye) * (Distance / fSamples);
+    
+    vec3 samplePoint = Point + (SampleOffset*0.5);
+    float avg=0.0;
+    float backscatter = 0.0;
+    float atten=0.0;
+
+    for (int i=0;i<samples;i++) {
+        float dotSampleLight = dot(
+            normalize(samplePoint),
+            normalize( Light - samplePoint   )
+        );
+        float dotSampleEye = dot(
+            normalize(samplePoint),
+            normalize( Eye )
+        );
+        if (  dotSampleEye > maxOccAngle ) {
+            // ground
+            avg += dotSampleLight;
+            avg += distance(samplePoint,Point);
+        } else {
+            // atmosphere
+            avg += dotSampleLight;
+            avg += distance(samplePoint,Point);
+        }
+
+        atten +=  //(
+                    distance(samplePoint , Point );
+                 //   - MaxDepth
+                //)  / (1.0-MaxDepth);
+        
+        backscatter +=  dot( normalize( Eye+samplePoint ) , normalize( Light ) );
+        samplePoint += SampleOffset;
+
+    }
+    avg/= 4.0;
+    atten/= 2.0*3.14;
+    //atten = rayDepth;
+    backscatter /= 4.0;
+    backscatter = 0.5 + (backscatter*0.5);  
+    //clamp( avg, 0.0 ,1.0);
+    //float SmoothAvg = smoothstep(-maxOccAngle,0.0,avg);
+    float SmoothAvg = smoothstep(-maxOccAngle*0.5, maxOccAngle*0.5 ,avg);
+    float BackScatter = smoothstep( 1.0- maxOccAngle,1.0, backscatter );
+
+        
+    float fOcclude = smoothstep( -maxOccAngle,0.0,cosPointLight);
+    
+    // what angle are we observing the light 
+    float cosEyeLight = dot( normalize(vNormal*vTBN),-normalize(vLight1Vector ));
+   
+
+    vec3 Scatter =  vec3(0.06,0.445,1.0) *  avg;
+           
+    vec3 Atten = ( (vec3(1.0)-vec3(0.06,0.445,1.0)) * (1.0 -  avg) );
+//gl_FragColor.rgb += Scatter;
+//gl_FragColor.rgb += Atten;
+//gl_FragColor.rgb += backscatter;
+
+    //gl_FragColor.r = atten;
+    //gl_FragColor.b = Opacity;
+//    gl_FragColor.r = backscatter;
+    gl_FragColor.rgb = exp( vec3(0.05,0.1,1.0) ) * avg; 
+    gl_FragColor.a = avg;//avg; //atten * fOcclude ;
+
+    //  gl_LightSource[1].diffuse.rgb * (1.0 - Scatter);
+                
+                
+    //gl_FragColor.rgb = mix( vec3(2.0,0.8,0.25) , vec3(0.1,0.4,2.0), avg );
+    
+    //gl_FragColor.rgb = vec3(0.5) + ( Sample[3] * 0.5  );
+//gl_FragColor.r = LDist[3];
+//gl_FragColor.g = LDist[0];
+//gl_FragColor.b = cosPointLight; 
+ //   gl_FragColor.r = fOutScatter;
+ //   gl_FragColor.b = Opacity;
+    
+//   gl_FragColor.rgb += Scatter * SmoothAvg;
+
+
+//    gl_FragColor.rgb +=  Atten *  BackScatter ;
+//    gl_FragColor.rgb += SmoothAvg * Scatter * gl_LightSource[1].diffuse.rgb;
+
+    //gl_FragColor.rgb += Atten * ( 1.0 - avg ) * (1.0 - fOutScatter);
+    //gl_FragColor.rgb = Atten + Scatter ;
+    //gl_FragColor.g = SmoothAvg;
+    //gl_FragColor.r = cosEyeLight;
+    //gl_FragColor.a = Opacity * SmoothAvg;
+
+
+/* //cloud texture   
+	vec3 coords = normalize(vCoords);
+    float CloudDensity = texture2D( 
+                        uCloudMap ,
+                        vec2(TexLongitude(coords.x, coords.z), vTexCoords.t)
+                ).a;
+
+
+
 
     vec3 vIllum = gl_LightSource[1].diffuse.rgb;
 
-    float fOcclude = smoothstep( -maxOccAngle, 0.0, cosPointLight);
  
-    vIllum *=  mix( vec3(0.8,0.42,0.1),vec3(0.1,0.25,1.0)  , fOcclude );
+    vIllum *=  mix( vec3(0.8,0.42,0.1),vec3(0.1,0.25,1.0)  , avg );
     vIllum += vec3(0.5) * Opacity;
     vIllum += gl_LightSource[1].ambient.rgb;
     //vIllum = mix( gl_LightSource[1].ambient.rgb , vIllum, fOcclude ); 
-    gl_FragColor.rgb = vIllum;    
+    gl_FragColor.rgb = vIllum;
     //gl_FragColor.rgb = clamp( vIllum / Opacity, 0.0,1.0);
     //gl_FragColor.r = smoothstep( -maxOccAngle, 0.0, cosPointLight);  
 
-    Opacity *=   fOcclude;
+    //Opacity +=  CloudDensity - 0.5;; 
+    //Opacity *=   fOcclude;
+    gl_FragColor.a = avg * Opacity;
+*/
+  
+/*
+gl_FragColor.r = maxOccAngle;
+gl_FragColor.b = maxOccDistance;
+gl_FragColor.g = minOccDistance;
+gl_FragColor.a = 1.0;
+*/
 
-    gl_FragColor.a = Opacity;
+
+
 }
 

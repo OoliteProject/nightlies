@@ -43,8 +43,8 @@
 		uniforms =
 		{
             uColor  = { type="vector"; value="0.1 0.2 1.0 0.5 "; };
-            uCloudMap = { type = texture; value=0; };
-            uDiffuse  = { type = texture; value=1; };
+            uCloudMap = { type = texture; value=1; };
+            uDiffuseMap  = { type = texture; value=0; };
             fPlanetRadius = { type = binding; binding="planetRadius" ;};
             fAtmosRadius = "atmosphereRadius";
             Scattering = { type="vector"; value="0.12 0.16 0.4 0.0"; };

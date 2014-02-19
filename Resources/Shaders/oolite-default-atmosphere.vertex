@@ -1,3 +1,4 @@
+#version 120
 varying	vec3			vNormal;
 varying vec3			vEyeVector;
 varying vec2			vTexCoords;
@@ -8,7 +9,7 @@ varying mat3			vTBN;
 uniform float fPlanetRadius;
 uniform float fAtmosRadius;
 
-
+/*
 bool IOsphereIntersect(vec3 vPos,vec3 vRay,float Radius,inout vec3 vIntersect,inout vec3 vExit,inout float Dist) {
 	float Radius2= Radius*Radius;	
 	float tca = dot(vPos,normalize(vRay));
@@ -41,15 +42,26 @@ bool IOsphereIntersect(vec3 vPos,vec3 vRay,float Radius,inout vec3 vIntersect,in
     vExit = vPos + tfar * vRay; 
 	return true;	
 }
+*/
 
+varying vec3 Point;
+varying vec3 Eye;
+varying vec3 Light;
 
-varying float cosPointEye = 0.0;
-varying float cosPointLight = 0.0; 
-varying float maxOccAngle = 0.0;
+varying float cosPointEye;
+varying float cosPointLight;
+invariant varying float maxOccAngle;
+invariant varying float   maxOccDistance;
+invariant varying float   minOccDistance;
+
+varying vec3 Sample[4];
+varying float LDist[4];
+
+varying float Distance;
 
 void main(void)
 {
-	vCoords = vec3(0.0);//gl_Vertex.xyz;
+	vCoords = gl_Vertex.xyz;
 	
 	vNormal = normalize(gl_NormalMatrix * gl_Normal);
 	vec3 binormal = cross(vNormal, gl_NormalMatrix * vec3(0, 1, 0));
@@ -73,16 +85,18 @@ void main(void)
     // maximum angle
     //float maxOccAngle =  ( ad / d );
     maxOccAngle = d / fAtmosRadius;
-
+    maxOccDistance = 2.0*( d  / fAtmosRadius);
+    minOccDistance = ad / fAtmosRadius;
     //vCoords.r = maxOccAngle;
     //vCoords.r = dot( normalize(VertexObj) , -normalize( vLight1Vector ) );
 
     //vCoords.b =  dot( normalize( vec3(gl_Vertex) ) , normalize( vec3(gl_Normal) )  ); 
                    
     //vCoords.r = maxOccAngle;
-    vec3 Point =  vec3( gl_NormalMatrix * gl_Normal);
-    vec3 Eye =  -vec3( gl_ModelViewMatrix * gl_Vertex );
-    vec3 Light = gl_LightSource[1].position.xyz ;
+    Point =  vec3( gl_NormalMatrix * gl_Normal);
+    Eye =  -vec3( gl_ModelViewMatrix * gl_Vertex );
+    Light = gl_LightSource[1].position.xyz ;
+
 
     // the angle the camera ray intersects the atmosphere, below maxOccAngle is a 
     //  insersection with the planet.
@@ -90,6 +104,38 @@ void main(void)
     // the angle the Light intersects with the atmosphere, below maxOccAngle is
     //  occlusion
     cosPointLight = dot( normalize(Point) , normalize(Light) );
+    
+    float Dist = 0.0;
+    if (  cosPointEye > maxOccAngle ) {
+        // ground
+        //Opacity  = ( exp( 1.0 - smoothstep(  maxOccAngle, 1.0 , cosPointEye ) ) - 1.0 ) / 1.71828;
+        Dist = 1.0 - smoothstep(  maxOccAngle, 1.0 , cosPointEye );
+        
+    } else {
+        // atmosphere
+        Dist = smoothstep(0.0,maxOccAngle,cosPointEye);
+        //Dist *= 2.0;
+    }
+
+    Distance = Dist;
+    
+    float fSamples = 4.0;
+    int samples = int(fSamples);
+    vec3 SampleOffset = -normalize(Eye) * (Dist / fSamples);
+    
+    vec3 samplePoint = Point + (SampleOffset*0.5);
+     
+    for (int i=0;i<samples;i++) {
+        Sample[i] = samplePoint;
+        float dotSampleLight = dot(
+            normalize(samplePoint),
+            normalize(Light + Eye )
+        );
+        LDist[i] = dotSampleLight;
+        
+        samplePoint += SampleOffset;
+    }
+
 
     //vCoords.g = step( maxOccAngle, cosPointEye ) ; // cosPosEye;
     //vCoords.b = abs( dot( normalize(Point) , normalize(Eye) ) );
