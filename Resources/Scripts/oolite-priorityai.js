@@ -1603,7 +1603,7 @@ PriorityAIController.prototype.conditionMothershipIsAttacking = function()
 	if (this.ship.group && this.ship.group.leader != this.ship)
 	{
 		var leader = this.ship.group.leader;
-		if (leader.target && this.isFighting(leader) && this.distance(leader.target) < this.scannerRange)
+		if (leader && leader.target && this.isFighting(leader) && this.distance(leader.target) < this.scannerRange)
 		{
 			return true;
 		}
@@ -1617,7 +1617,7 @@ PriorityAIController.prototype.conditionMothershipIsAttackingHostileTarget = fun
 	if (this.ship.group && this.ship.group.leader != this.ship)
 	{
 		var leader = this.ship.group.leader;
-		if (leader.target && this.isFighting(leader) && this.isAggressive(leader.target) && this.distance(leader.target) < this.scannerRange)
+		if (leader && leader.target && this.isFighting(leader) && this.isAggressive(leader.target) && this.distance(leader.target) < this.scannerRange)
 		{
 			return true;
 		}
@@ -1630,7 +1630,7 @@ PriorityAIController.prototype.conditionMothershipUnderAttack = function()
 	if (this.ship.group && this.ship.group.leader != this.ship)
 	{
 		var leader = this.ship.group.leader;
-		if (leader.target && leader.target.target == leader && leader.target.hasHostileTarget && this.distance(leader.target) < this.scannerRange)
+		if (leader && leader.target && leader.target.target == leader && leader.target.hasHostileTarget && this.distance(leader.target) < this.scannerRange)
 		{
 			return true;
 		}
@@ -3048,6 +3048,27 @@ PriorityAIController.prototype.behaviourFleeCombat = function()
 			{
 				this.ship.notifyGroupOfWormhole();
 				delete this.__ltcache.oolite_witchspaceflee;
+			}
+		}
+	}
+	if (this.ship.group && this.ship.group.leader && this.ship.group.leader != this.ship)
+	{
+		var leader = this.ship.group.leader;
+		if (leader.status == "STATUS_ENTERING_WITCHSPACE")
+		{
+			var wormholes = system.wormholes;
+			for (var i=0;i<wormholes.count;i++)
+			{
+				var wormhole = wormholes[i];
+				if (wormhole.expiryTime > clock.seconds && wormhole.position.distanceTo(leader) < 100 && wormhole.position.distanceTo(this.ship) < this.scannerRange)
+				{
+					// if the leader has departed and the wormhole is
+					// reachable, go for it!
+					this.ship.destination = wormhole.position;
+					this.ship.desiredSpeed = this.ship.maxFlightSpeed * 7;
+					this.ship.performFlyToRangeFromDestination();
+					return;
+				}
 			}
 		}
 	}
