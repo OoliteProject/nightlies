@@ -48,7 +48,7 @@ varying vec3 Point;
 varying vec3 Eye;
 varying vec3 Light;
 
-varying float cosPointEye;
+//varying float cosPointEye;
 varying float cosPointLight;
 invariant varying float maxOccAngle;
 invariant varying float   maxOccDistance;
@@ -100,7 +100,7 @@ void main(void)
 
     // the angle the camera ray intersects the atmosphere, below maxOccAngle is a 
     //  insersection with the planet.
-    cosPointEye = dot( normalize(Point) , normalize(Eye) );
+    float cosPointEye = dot( normalize(Point) , normalize(Eye) );
     // the angle the Light intersects with the atmosphere, below maxOccAngle is
     //  occlusion
     cosPointLight = dot( normalize(Point) , normalize(Light) );
@@ -144,42 +144,3 @@ void main(void)
 }
 
 
-/*
-{
-	vCoords = gl_Vertex.xyz;
-	
-	
-	// Build tangent basis.
-	vec3 normal = normalize(gl_NormalMatrix * gl_Normal);
-	vec3 binormal = cross(normal, gl_NormalMatrix * vec3(0, 1, 0));
-	vec3 tangent = -cross(normal, binormal);
-	
-	mat3 TBN = mat3(tangent, binormal, normal);
-	
-	eyeVector = -vec3(gl_ModelViewMatrix * gl_Vertex);
-	vEyeVector = eyeVector * TBN;
-
-	vec3 light1Vector = gl_LightSource[1].position.xyz + eyeVector;
-	vLight1Vector = light1Vector * TBN;
-	
-	//
-	//vVertexWorld = ooposition + normal * fAtmosRadius;
-	vVertexObj   = vec3(gl_ModelViewMatrix * gl_Vertex);
-	//vSurfaceWorld = ooposition + normal * fPlanetRadius;
-
-    // relative position ? uniform binding
-	//CameraPos = ooposition + normal * eyeVector * fAtmosRadius;
-	
-	
-	vNormal = gl_Normal;
-    vCoords = gl_Vertex.xyz;
-	vLight1Pos = (ooposition - gl_LightSource[1].position.xyz) * vNormal ;
-	vTexCoords = gl_MultiTexCoord0.st;
-	gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
-
-
-
-
-
-}
-*/
