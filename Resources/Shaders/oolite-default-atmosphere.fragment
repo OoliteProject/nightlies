@@ -14,69 +14,12 @@ uniform sampler2D uCloudMap;
 uniform sampler2D uDiffuseMap;
 
 
-/*
-bool IOsphereIntersect(vec3 vPos,vec3 vRay,float Radius,inout vec3 vIntersect,inout vec3 vExit,inout float Dist) {
-	float Radius2= Radius*Radius;	
-	float tca = dot(vPos,normalize(vRay));
-	if (tca < 0.0 ) {
-		return false;
-	}
-	//float d2 = length(ooposition - vPos ) - pow(tca,2.0);
-	float d2 = length(vPos) - pow(tca,2.0);
-	if (d2 > Radius2) { 
-		return false;
-	}
-
-
-	float thc = sqrt( Radius2 - d2 );
-	float t0 = tca - thc;
-	float t1 = tca + thc;
-	Dist = thc*2.0;
-    Dist = length( t0 - t1 );
-    float tnear;
-    float tfar;
-    if ( t0 > 0.0 ) {
-        tnear = t0;	
-        tfar = t1;
-
-    } else {
-        tnear = t1;
-        tfar = t0;
-    }
-    vIntersect = vPos + tnear * vRay;
-    vExit = vPos + tfar * vRay; 
-	return true;	
-}
-
-//	Approximation of atan(y/z) with quadrant rectification, scaled to -0.5..0.5 instead of -pi..pi.
-//	It is assumed that the values are in range. You are not expected to understand this.
-//
-
-float TexLongitude(float z, float y)
-{
-	const float	k2Pi = 6.283185307179586;
-	const float	kMagic = 0.2732395447351;	// (4 - pi) / pi
-	
-	float ratio = z / y;
-	
-	float r1 = 1.0 / ((ratio + kMagic / ratio) * k2Pi);	// Result when abs(z) >= abs(x).
-	float r2 = 0.25 * sign(ratio) - ratio / ((1.0 + kMagic * ratio * ratio) * k2Pi);  // Result when abs(z) <= abs(x).
-	
-	float result = (abs(ratio) > 1.0) ? r1 : r2;
-	
-	// Adjust for sector.
-	// Equivalent to (z < 0.0) ? ((y > 0.0) ? 0.75 : -0.25) : 0.25.
-	// Well, technically not equivalent for z < 0, y = 0, but you'll very rarely see that exact case.
-	return result + step(z, 0.0) * sign(y) * 0.5 + 0.25;
-}
-*/
-
 
 varying vec3 Point;
 varying vec3 Eye;
 varying vec3 Light;
 
-varying float cosPointEye;
+//varying float cosPointEye;
 varying float cosPointLight;
 
 varying float   maxOccAngle; 
@@ -92,7 +35,7 @@ varying float Distance;
 
 void main(void) {
 
-    float Illumination = 0.0;
+    vec3 Illumination = 0.0;
     float Opacity = 0.0;
     float eyeDistance = 0.0;
     float Height = 0.0;
@@ -122,10 +65,10 @@ void main(void) {
         Opacity = rayDepth;
     }
     
-    float fSamples = 3.0;
+    float fSamples = 1.0;
     int samples = int(fSamples);
-    vec3 SampleOffset = -normalize(Eye) * (rayDepth / fSamples);
-    
+  
+    vec3 SampleOffset = -normalize(Eye) * (rayDepth / fSamples);    
     vec3 samplePoint = Point + (SampleOffset*0.5);
 
     float avg=0.0;
@@ -134,95 +77,72 @@ void main(void) {
     float occ=0.0;
     float height=0.0;
 
-    vec3 nEye = normalize(Eye);
-
+    //vec3 nEye = normalize(Eye);
+    vec3 nLightMSample = normalize(Light-Eye);    
+//    vec3 nLight = normalize(Light);
+        
     for (int i=0;i<samples;i++) {
-        vec3 nLightMSample = normalize(Light  + Eye);    
-        vec3 nLight = normalize(Light);
         vec3 nSample = normalize(samplePoint);
     
         float dotSampleLight = dot(
             nSample,
             nLightMSample
         );
-        float dotSampleEye = dot(
-            nSample,            
-            nEye
-        );
+        //float dotSampleEye = dot(
+        //    nSample,            
+        //    nEye
+        //);
 
-        if (  dotSampleEye > maxOccAngle ) {
+        //if (  dotSampleEye > maxOccAngle ) {
             // ground
             avg += dotSampleLight;
             atten += distance(samplePoint,Point);
-            //height +=  length(samplePoint)  - (fPlanetRadius/fAtmosRadius);
-            height +=
-                        length(samplePoint) - (fPlanetRadius/fAtmosRadius);
-            //occ += -dotSampleLight;
             occ += smoothstep(-maxOccAngle,0.0,dotSampleLight);
-           // occ += smoothstep( maxOccAngle, 1.0, dotSampleLight );// dot(normalize(samplePoint) , normalize(Light)) );
 
-        } else {
+        //} else {
             // atmosphere
-            avg += dotSampleLight ;
-            atten += distance(samplePoint,Point);
-            height += length(samplePoint) - (fPlanetRadius/fAtmosRadius);
-            occ += smoothstep( -maxOccAngle,0.0,dotSampleLight);
+            //avg += dotSampleLight ;
+            //atten += distance(samplePoint,Point);
+            //occ += smoothstep( -maxOccAngle,0.0,dotSampleLight);
 
 
-        }
+        //}
 
 
        
 
-        backscatter +=  dot( normalize( Eye+samplePoint ) ,normalize(Light)  );
+        //backscatter +=  dot( normalize( Eye+samplePoint ) ,normalize(Light)  );
 
         samplePoint += SampleOffset;
 
     }
     avg/= fSamples;
     occ/= fSamples;
+    atten /= fSamples;
 
-   //occ =        smoothstep( maxOccAngle,0.0,occ);
-
-
-    height /= fSamples;
-    
-    //height = smoothstep(0.0, 4.0 *(fAtmosRadius - fPlanetRadius)/fAtmosRadius, height);
-//    height = smoothstep( 0.9, 1.0, height );
- 
-/*   height = smoothstep( 
-                1.0 - (( fAtmosRadius-fPlanetRadius)/fAtmosRadius)
-                ,1.0
-                , height 
-            );
-  */  
-//  height = 1.0 - smoothstep( fPlanetRadius/fAtmosRadius * 3.14, 2.0 * 3.14, height);
-  
-    atten /= 4.0;
     //atten = rayDepth;
-    backscatter /= 4.0;
+    backscatter /= fSamples;
     backscatter = 0.5 + (backscatter*0.5);
 
 
+gl_FragColor.rgb = vec3(0.0);
 
-    //clamp( avg, 0.0 ,1.0);
-    //float SmoothAvg = smoothstep(-maxOccAngle,0.0,avg);
-    float SmoothAvg = smoothstep(-maxOccAngle*0.5, maxOccAngle*0.5 ,avg);
-    float BackScatter = smoothstep( 1.0- maxOccAngle,1.0, backscatter );
+    Illumination += exp(vec3(0.25,0.5,1.0) *avg+atten ) - vec3(0.9999) ;    
+    //Illumination += occ * Illumination * 0.5;
 
-        
-    float fOcclude = smoothstep( -maxOccAngle,0.0,cosPointLight);
-    
-    // what angle are we observing the light 
-    float cosEyeLight = dot( normalize(Point*vTBN),-normalize(vLight1Vector ));
+    float Alpha = occ*atten;
+    float Intensity = length(Illumination) / 1.4142;
 
+    gl_FragColor.rgb = Illumination;// / Intensity;    
 
-    //gl_FragColor.r = pow( height*3.1416*2.0, 2.0 );   //height * 2.0 * 3.1416  ;
-    //gl_FragColor.b = (fAtmosRadius-fPlanetRadius) / fAtmosRadius;
-    gl_FragColor.b = avg;
-    gl_FragColor.r = atten;
-    gl_FragColor.g = occ;
-    gl_FragColor.a = 1.0 ; //pow(rayDepth,2.0) * (1.0-occ);
+    //gl_FragColor.rgb -= (1.0 - occ) * gl_FragColor.rgb; 
+    //gl_FragColor.b = avg;
+;//1.0 - exp( vec3(0.6,0.8,2.4) * avg * atten);
+//    gl_FragColor.rgb += vec3(1.0,0.7,0.15) * (1.0 - clamp(atten,0.0,1.0) );
+    //gl_FragColor.rgb = normalize(gl_FragColor.rgb);
+//    gl_FragColor.r = atten;
+//    gl_FragColor.g = occ;
+    gl_FragColor.a = exp(rayDepth*occ)-1.0;;//clamp(Intensity,0.0,1.0)    * occ;//occ * atten; //pow(rayDepth,2.0) * (1.0-occ);
 
 
 

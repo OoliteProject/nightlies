@@ -49,7 +49,7 @@ typedef enum
 } OOStellarBodyType;
 
 
-#define ATMOSPHERE_DEPTH		1500.0
+#define ATMOSPHERE_DEPTH		500.0
 #define PLANET_MINIATURE_FACTOR	0.00185
 #define MAX_SUBDIVIDE			6
 

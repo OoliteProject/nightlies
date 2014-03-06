@@ -100,11 +100,12 @@ void main(void)
 
     // the angle the camera ray intersects the atmosphere, below maxOccAngle is a 
     //  insersection with the planet.
-    float cosPointEye = dot( normalize(Point) , normalize(Eye) );
+    float cosPointEye = dot( normalize(Point) , -normalize(Eye) );
     // the angle the Light intersects with the atmosphere, below maxOccAngle is
     //  occlusion
     cosPointLight = dot( normalize(Point) , normalize(Light) );
-    
+ 
+/*   
     float Dist = 0.0;
     if (  cosPointEye > maxOccAngle ) {
         // ground
@@ -135,7 +136,7 @@ void main(void)
         
         samplePoint += SampleOffset;
     }
-
+*/
 
     //vCoords.g = step( maxOccAngle, cosPointEye ) ; // cosPosEye;
     //vCoords.b = abs( dot( normalize(Point) , normalize(Eye) ) );
