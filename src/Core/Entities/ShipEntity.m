@@ -11626,7 +11626,7 @@ Vector positionOffsetForShipInRotationToAlignment(ShipEntity* ship, Quaternion q
 	
 	Quaternion  jetto_orientation = kIdentityQuaternion;
 	Vector  vel, v_eject, v_eject_normal;
-	HPVector  rpos = position;
+	HPVector  rpos = [self absolutePositionForSubentity];
 	double jetto_roll =	0;
 	double jetto_pitch = 0;
 	
@@ -12381,6 +12381,11 @@ Vector positionOffsetForShipInRotationToAlignment(ShipEntity* ship, Quaternion q
 				_escortGroup = nil;
 			}
 		}
+	}
+	else if (EXPECT([self isSubEntity]))
+	{
+		// may still have launched passenger pods even if no crew
+		[self removeEquipmentItem:@"EQ_ESCAPE_POD"];
 	}
 	else
 	{
