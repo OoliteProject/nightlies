@@ -9,6 +9,7 @@ Changes between Oolite 1.80 and Oolite 1.80.1:
 * Fix Linux uninstall script error handling
 * Fix errors with escape pod launch from subentities
 
+-------------------------------------------------------------------------------
 
 Changes between Oolite 1.78 and Oolite 1.80:
 
