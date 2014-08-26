@@ -269,7 +269,7 @@ typedef enum
 #define AFT_FACING_STRING				DESC(@"aft-facing-string")
 #define PORT_FACING_STRING				DESC(@"port-facing-string")
 #define STARBOARD_FACING_STRING			DESC(@"starboard-facing-string")
-
+#define HEADTRACK_FACING_STRING			DESC(@"headtrack-facing-string")
 #define KEY_REPEAT_INTERVAL				0.20
 
 #define PLAYER_SHIP_CLOCK_START			(2084004 * 86400.0)
@@ -557,9 +557,22 @@ typedef enum
 	NSString				*scenarioKey;
 	
 	// position of viewports
-	Vector					forwardViewOffset, aftViewOffset, portViewOffset, starboardViewOffset;
+	Vector					forwardViewOffset, aftViewOffset, portViewOffset, starboardViewOffset, headtrackViewOffset;
+	Vector					headtrackViewVector;
 	Vector					_sysInfoLight;
 	
+	// custom view points
+	Quaternion				defaultViewHeadtrackQuaternion;
+	OOMatrix				defaultViewHeadtrackMatrix;
+	Vector					defaultViewHeadtrackOffset, defaultViewHeadtrackForwardVector, defaultViewHeadtrackUpVector, defaultViewHeadtrackRightVector;
+	
+	GLfloat					max_headtrack_pitch;		// maximum head pitch rate - seems useless for keyboard, but we keep it just in case it will be needed for joystick or head track devices  (1.0)
+	GLfloat					max_headtrack_yaw;
+	GLfloat					headtrackPitch;			// current head pitch rate
+	GLfloat					headtrackYaw;			// current head yaw rate
+	GLfloat					headtrack_pitch_delta, headtrack_yaw_delta;
+	unsigned				headtrack_pitching: 1, headtrack_yawing: 1;
+
 	// trumbles
 	NSUInteger				trumbleCount;
 	OOTrumble				*trumble[PLAYER_MAX_TRUMBLES];
@@ -992,6 +1005,30 @@ typedef enum
 - (Vector) viewpointOffsetForward;
 - (Vector) viewpointOffsetPort;
 - (Vector) viewpointOffsetStarboard;
+- (Vector) viewpointOffsetHeadtrack;
+
+- (void)setDefaultViewHeadtrackData;
+- (void) resetHeadtrackRoll:(OOViewID)viewDirection;
+- (void) applyHeadtrackRoll:(GLfloat) climb1 andYaw:(GLfloat) yaw1;
+
+- (Quaternion)defaultViewHeadtrackQuaternion;
+- (OOMatrix)defaultViewHeadtrackMatrix;
+- (Vector)defaultViewHeadtrackOffset;
+- (Vector)defaultViewHeadtrackForwardVector;
+- (Vector)defaultViewHeadtrackUpVector;
+- (Vector)defaultViewHeadtrackRightVector;
+
+
+- (void) increase_headtrack_pitch:(double)delta;
+- (void) decrease_headtrack_pitch:(double)delta;
+- (void) increase_headtrack_yaw:(double)delta;
+- (void) decrease_headtrack_yaw:(double)delta;
+- (GLfloat) headtrackPitch;
+- (GLfloat) headtrackYaw;
+/*
+- (GLfloat) maxHeadtrackPitch;
+- (GLfloat) maxHeadtrackYaw;
+*/
 
 
 - (NSDictionary *) missionOverlayDescriptor;

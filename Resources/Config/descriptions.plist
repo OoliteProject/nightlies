@@ -1028,6 +1028,7 @@
 	"aft-view-string"				= "Aft View";
 	"port-view-string"				= "Port View";
 	"starboard-view-string"			= "Starboard View";
+	"headtrack-view-string"			= "Head Track View";
 	
 	// GUI strings common to more than one screens
 	"gui-back"						= " Back ";
