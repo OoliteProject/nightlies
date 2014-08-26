@@ -1714,6 +1714,14 @@ NSComparisonResult marketSorterByMassUnit(id a, id b, void *market);
 	flightPitch = 0.0f;
 	flightYaw = 0.0f;
 
+	headtrackPitch = 0.0f;
+	headtrackYaw = 0.0f;
+	max_headtrack_pitch = 0.5f;
+	max_headtrack_yaw = 0.5f;
+	headtrack_pitch_delta = 2.0f * max_headtrack_pitch;
+	headtrack_yaw_delta = 2.0f * max_headtrack_yaw;
+	
+	
 	max_passengers = 0;
 	[passengers release];
 	passengers = [[NSMutableArray alloc] init];
@@ -1862,11 +1870,12 @@ NSComparisonResult marketSorterByMassUnit(id a, id b, void *market);
 	specialCargo = nil;
 	
 	// views
-	forwardViewOffset		= kZeroVector;
-	aftViewOffset			= kZeroVector;
-	portViewOffset			= kZeroVector;
-	starboardViewOffset		= kZeroVector;
-	customViewOffset		= kZeroVector;
+	forwardViewOffset			= kZeroVector;
+	aftViewOffset				= kZeroVector;
+	portViewOffset				= kZeroVector;
+	starboardViewOffset			= kZeroVector;
+	defaultViewHeadtrackOffset	= kZeroVector;
+	customViewOffset			= kZeroVector;
 	
 	currentWeaponFacing		= WEAPON_FACING_FORWARD;
 	[self currentWeaponStats];
@@ -2002,6 +2011,8 @@ NSComparisonResult marketSorterByMassUnit(id a, id b, void *market);
 	aftViewOffset = [shipDict oo_vectorForKey:@"view_position_aft" defaultValue:aftViewOffset];
 	portViewOffset = [shipDict oo_vectorForKey:@"view_position_port" defaultValue:portViewOffset];
 	starboardViewOffset = [shipDict oo_vectorForKey:@"view_position_starboard" defaultValue:starboardViewOffset];
+	defaultViewHeadtrackOffset = [shipDict oo_vectorForKey:@"view_position_headtrack" defaultValue:defaultViewHeadtrackOffset];
+	defaultViewHeadtrackQuaternion = kIdentityQuaternion;
 	
 	[self setDefaultCustomViews];
 	
@@ -2164,7 +2175,7 @@ NSComparisonResult marketSorterByMassUnit(id a, id b, void *market);
 				 [uni_entities[i] isVisible]))
 			{
 				// the player ship can't shadow internal views
-				if (EXPECT(vdir > VIEW_STARBOARD || ![uni_entities[i] isPlayer]))
+				if (EXPECT(vdir > VIEW_HEADTRACK || ![uni_entities[i] isPlayer]))
 				{
 					float shadow = 1.5f;
 					shadowAtPointOcclusionToValue([self viewpointPosition],1.0f,uni_entities[i],sun,&shadow);
@@ -2193,6 +2204,13 @@ NSComparisonResult marketSorterByMassUnit(id a, id b, void *market);
 			break;
 		case VIEW_STARBOARD:
 			measuredCos = -dot_product(unitRelativePosition, v_right);
+			break;
+		case VIEW_HEADTRACK:
+			{
+				Vector relativeView = [self defaultViewHeadtrackForwardVector];
+				Vector absoluteView = quaternion_rotate_vector(quaternion_conjugate([self orientation]),relativeView);
+				measuredCos = -dot_product(unitRelativePosition, absoluteView);
+			}
 			break;
  		case VIEW_CUSTOM:
 			{
@@ -3116,6 +3134,78 @@ NSComparisonResult marketSorterByMassUnit(id a, id b, void *market);
 }
 
 
+- (void) increase_headtrack_pitch:(double) delta
+{
+	headtrackPitch = max_headtrack_pitch;
+/*
+	if (headtrackPitch < max_headtrack_pitch)
+		headtrackPitch += delta;
+	if (headtrackPitch > max_headtrack_pitch)
+		headtrackPitch = max_headtrack_pitch;
+*/
+}
+
+
+- (void) decrease_headtrack_pitch:(double) delta
+{
+	headtrackPitch = -max_headtrack_pitch;
+/*
+	if (headtrackPitch > -max_headtrack_pitch)
+		headtrackPitch -= delta;
+	if (headtrackPitch < -max_headtrack_pitch)
+		headtrackPitch = -max_headtrack_pitch;
+*/
+}
+
+
+- (void) increase_headtrack_yaw:(double) delta
+{
+	headtrackYaw = max_headtrack_yaw;
+/*
+	if (headtrackYaw < max_headtrack_yaw)
+		headtrackYaw += delta;
+	if (headtrackYaw > max_headtrack_yaw)
+		headtrackYaw = max_headtrack_yaw;
+*/
+}
+
+
+- (void) decrease_headtrack_yaw:(double) delta
+{
+		headtrackYaw = -max_headtrack_yaw;
+/*
+	if (headtrackYaw > -max_headtrack_yaw)
+		headtrackYaw -= delta;
+	if (headtrackYaw < -max_headtrack_yaw)
+		headtrackYaw = -max_headtrack_yaw;
+*/
+}
+
+
+- (GLfloat) headtrackPitch
+{
+	return headtrackPitch;
+}
+
+
+- (GLfloat) headtrackYaw
+{
+	return headtrackYaw;
+}
+
+/*
+- (GLfloat) maxHeadtrackPitch
+{
+	return max_headtrack_pitch;
+}
+
+
+- (GLfloat) maxHeadtrackYaw
+{
+	return max_headtrack_yaw;
+}
+*/
+
 - (void) updateTrumbles:(OOTimeDelta)delta_t
 {
 	OOTrumble	**trumbles = [self trumbleArray];
@@ -3804,6 +3894,8 @@ NSComparisonResult marketSorterByMassUnit(id a, id b, void *market);
 			return portViewOffset;
 		case VIEW_STARBOARD:
 			return starboardViewOffset;
+		case VIEW_HEADTRACK:
+			return defaultViewHeadtrackOffset;
 		/* GILES custom viewpoints */
 		case VIEW_CUSTOM:
 			return customViewOffset;
@@ -3837,6 +3929,10 @@ NSComparisonResult marketSorterByMassUnit(id a, id b, void *market);
 	return starboardViewOffset;
 }
 
+- (Vector) viewpointOffsetHeadtrack
+{
+	return defaultViewHeadtrackOffset;
+}
 
 /* TODO post 1.78: profiling suggests this gets called often enough
  * that it's worth caching the result per-frame - CIM */
@@ -10631,6 +10727,7 @@ static NSString *last_outfitting_key=nil;
 	aftViewOffset = make_vector(0.0f, 0.0f, boundingBox.min.z + halfLength);
 	portViewOffset = make_vector(boundingBox.min.x + halfWidth, 0.0f, 0.0f);
 	starboardViewOffset = make_vector(boundingBox.max.x - halfWidth, 0.0f, 0.0f);
+	defaultViewHeadtrackOffset = kZeroVector;
 	customViewOffset = kZeroVector;
 }
 
@@ -11099,6 +11196,42 @@ static NSString *last_outfitting_key=nil;
 }
 
 
+- (Quaternion) defaultViewHeadtrackQuaternion
+{
+	return defaultViewHeadtrackQuaternion;
+}
+
+
+- (OOMatrix) defaultViewHeadtrackMatrix
+{
+	return defaultViewHeadtrackMatrix;
+}
+
+
+- (Vector) defaultViewHeadtrackOffset
+{
+	return defaultViewHeadtrackOffset;
+}
+
+
+- (Vector) defaultViewHeadtrackForwardVector
+{
+	return defaultViewHeadtrackForwardVector;
+}
+
+
+- (Vector) defaultViewHeadtrackUpVector
+{
+	return defaultViewHeadtrackUpVector;
+}
+
+
+- (Vector) defaultViewHeadtrackRightVector
+{
+	return defaultViewHeadtrackRightVector;
+}
+
+
 - (Quaternion) customViewQuaternion
 {
 	return customViewQuaternion;
@@ -11185,6 +11318,63 @@ static NSString *last_outfitting_key=nil;
 	}
 	// if the weapon facing is unset / unknown, 
 	// don't change current weapon facing!
+}
+
+
+- (void) resetHeadtrackRoll:(OOViewID)viewDirection
+{
+		switch (viewDirection)
+		{
+			case VIEW_FORWARD:
+				defaultViewHeadtrackQuaternion = (Quaternion) { 1.0f, 0.0f, 0.0f, 0.0f } ;
+				break;
+				
+			case VIEW_AFT:
+				defaultViewHeadtrackQuaternion = (Quaternion) { 0.0f, 0.0f, 1.0f, 0.0f } ;
+				break;
+				
+			case VIEW_PORT:
+				defaultViewHeadtrackQuaternion = (Quaternion) { 0.7071f, 0.0f, 0.7071f, 0.0f } ;
+				break;
+				
+			case VIEW_STARBOARD:
+				defaultViewHeadtrackQuaternion = (Quaternion) { 0.7071f, 0.0f, -0.7071f, 0.0f } ;
+				break;
+				
+			default:
+				break;
+		}
+}
+
+
+- (void) applyHeadtrackRoll:(GLfloat) climb1 andYaw:(GLfloat) yaw1
+{
+	if ((climb1 == 0.0)&&(yaw1 == 0.0))
+		return;
+
+	Quaternion q1 = kIdentityQuaternion;
+
+	if (climb1 && headtrack_pitching)
+		quaternion_rotate_about_x(&q1, -climb1);
+	if (yaw1 && headtrack_yawing)
+		quaternion_rotate_about_y(&q1, yaw1);
+
+	defaultViewHeadtrackQuaternion = quaternion_multiply(q1, defaultViewHeadtrackQuaternion);
+}
+
+
+- (void) setDefaultViewHeadtrackData
+{
+	Quaternion q1 = defaultViewHeadtrackQuaternion;
+	q1.w = -q1.w;
+	defaultViewHeadtrackMatrix = OOMatrixForQuaternionRotation(q1);
+	
+	defaultViewHeadtrackRightVector = vector_right_from_quaternion(defaultViewHeadtrackQuaternion);
+	defaultViewHeadtrackUpVector = vector_up_from_quaternion(defaultViewHeadtrackQuaternion);
+	defaultViewHeadtrackForwardVector = vector_forward_from_quaternion(defaultViewHeadtrackQuaternion);
+	
+	// customViewDescription = [viewDict oo_stringForKey:@"view_description"];
+	
 }
 
 

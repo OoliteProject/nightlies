@@ -4134,6 +4134,13 @@ static const OOMatrix	starboard_matrix =
 			*outUp = kBasisYVector;
 			return;
 			
+		case VIEW_HEADTRACK:
+			player = PLAYER;
+			*outMatrix = [player defaultViewHeadtrackMatrix];
+			*outForward = [player defaultViewHeadtrackForwardVector];
+			*outUp = [player defaultViewHeadtrackUpVector];
+			return;
+			
 		case VIEW_CUSTOM:
 			player = PLAYER;
 			*outMatrix = [player customViewMatrix];
@@ -4302,7 +4309,7 @@ static const OOMatrix	starboard_matrix =
 			wasDisplayGUI = displayGUI;
 			
 			// use a non-mutable copy so this can't be changed under us.
-			for (i = 0; i < ent_count; i++)
+			for (i = ((viewDirection == VIEW_HEADTRACK) ? 1 : 0); i < ent_count; i++)
 			{
 				/* BUG: this list is ordered nearest to furthest from
 				 * the player, and we just assume that the camera is
