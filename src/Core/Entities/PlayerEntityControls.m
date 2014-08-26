@@ -146,6 +146,7 @@ static NSTimeInterval	time_last_frame;
 
 - (void) pollFlightControls:(double) delta_t;
 - (void) pollFlightArrowKeyControls:(double) delta_t;
+- (void) pollHeadtrackArrowKeyControls:(double) delta_t;
 - (void) pollGuiArrowKeyControls:(double) delta_t;
 - (void) handleGameOptionsScreenKeys;
 - (void) pollApplicationControls;
@@ -791,6 +792,8 @@ static NSTimeInterval	time_last_frame;
 			NSPoint			virtualView = NSZeroPoint;
 			double			view_threshold = 0.5;
 			
+			BOOL headtrackViewKeyMode = [gameView isShiftDown];
+			
 			if ([stickHandler joystickCount])
 			{
 				virtualView = [stickHandler viewAxis];
@@ -804,21 +807,29 @@ static NSTimeInterval	time_last_frame;
 					virtualView.y = 0.0;
 			}
 		
-			if (([gameView isDown:gvFunctionKey1] || [gameView isDown:key_view_forward]) || (virtualView.y < -view_threshold) || joyButtonState[BUTTON_VIEWFORWARD])
+			if (((!headtrackViewKeyMode) && ([gameView isDown:gvFunctionKey1] || [gameView isDown:key_view_forward])) || (virtualView.y < -view_threshold) || joyButtonState[BUTTON_VIEWFORWARD])
 			{
 				view = VIEW_FORWARD;
+				[self resetHeadtrackRoll:VIEW_FORWARD];
 			}
-			if (([gameView isDown:gvFunctionKey2])||([gameView isDown:key_view_aft])||(virtualView.y > view_threshold)||joyButtonState[BUTTON_VIEWAFT])
+			if (((!headtrackViewKeyMode) && (([gameView isDown:gvFunctionKey2]) || ([gameView isDown:key_view_aft]))) || (virtualView.y > view_threshold) || joyButtonState[BUTTON_VIEWAFT])
 			{
 				view = VIEW_AFT;
+				[self resetHeadtrackRoll:VIEW_AFT];
 			}
-			if (([gameView isDown:gvFunctionKey3])||([gameView isDown:key_view_port])||(virtualView.x < -view_threshold)||joyButtonState[BUTTON_VIEWPORT])
+			if (((!headtrackViewKeyMode) && (([gameView isDown:gvFunctionKey3]) || ([gameView isDown:key_view_port]))) || (virtualView.x < -view_threshold) || joyButtonState[BUTTON_VIEWPORT])
 			{
 				view = VIEW_PORT;
+				[self resetHeadtrackRoll:VIEW_PORT];
 			}
-			if (([gameView isDown:gvFunctionKey4])||([gameView isDown:key_view_starboard])||(virtualView.x > view_threshold)||joyButtonState[BUTTON_VIEWSTARBOARD])
+			if (((!headtrackViewKeyMode) && (([gameView isDown:gvFunctionKey4]) || ([gameView isDown:key_view_starboard]))) || (virtualView.x > view_threshold) || joyButtonState[BUTTON_VIEWSTARBOARD])
 			{
 				view = VIEW_STARBOARD;
+				[self resetHeadtrackRoll:VIEW_STARBOARD];
+			}
+			if (headtrackViewKeyMode && ([gameView isDown:gvFunctionKey1] || [gameView isDown:gvFunctionKey2] || [gameView isDown:gvFunctionKey3] || [gameView isDown:gvFunctionKey4]))
+			{
+				view = VIEW_HEADTRACK;
 			}
 			if (view == VIEW_NONE)
 			{
@@ -848,6 +859,7 @@ static NSTimeInterval	time_last_frame;
 			
 			//  view keys
 			[self pollViewControls];
+			[self pollHeadtrackArrowKeyControls:delta_t];
 			
 			if (OOMouseInteractionModeIsFlightMode([[UNIVERSE gameController] mouseInteractionMode]))
 			{
@@ -2943,25 +2955,31 @@ static NSTimeInterval	time_last_frame;
 	}
 	
 	const BOOL *joyButtonState = [stickHandler getAllButtonStates];
+	BOOL headtrackViewKeyMode = [gameView isShiftDown];
 	
 	//  view keys
-	if (([gameView isDown:gvFunctionKey1] || [gameView isDown:key_view_forward]) || (virtualView.y < -view_threshold)||joyButtonState[BUTTON_VIEWFORWARD] || ((([gameView isDown:key_hyperspace] && gui_screen != GUI_SCREEN_LONG_RANGE_CHART) || joyButtonState[BUTTON_HYPERDRIVE]) && [UNIVERSE displayGUI]))
+	if (((!headtrackViewKeyMode) && ([gameView isDown:gvFunctionKey1] || [gameView isDown:key_view_forward])) || (virtualView.y < -view_threshold) || joyButtonState[BUTTON_VIEWFORWARD] || ((([gameView isDown:key_hyperspace] && gui_screen != GUI_SCREEN_LONG_RANGE_CHART) || joyButtonState[BUTTON_HYPERDRIVE]) && [UNIVERSE displayGUI]))
 	{
 		[self switchToThisView:VIEW_FORWARD];
+		[self resetHeadtrackRoll:VIEW_FORWARD];
 	}
-	if (([gameView isDown:gvFunctionKey2] || [gameView isDown:key_view_aft])||(virtualView.y > view_threshold)||joyButtonState[BUTTON_VIEWAFT])
+	if (((!headtrackViewKeyMode) && ([gameView isDown:gvFunctionKey2] || [gameView isDown:key_view_aft])) || (virtualView.y > view_threshold) || joyButtonState[BUTTON_VIEWAFT])
 	{
 		[self switchToThisView:VIEW_AFT];
+		[self resetHeadtrackRoll:VIEW_AFT];
 	}
-	if (([gameView isDown:gvFunctionKey3] || [gameView isDown:key_view_port])||(virtualView.x < -view_threshold)||joyButtonState[BUTTON_VIEWPORT])
+	if (((!headtrackViewKeyMode) && ([gameView isDown:gvFunctionKey3] || [gameView isDown:key_view_port])) || (virtualView.x < -view_threshold) || joyButtonState[BUTTON_VIEWPORT])
 	{
 		[self switchToThisView:VIEW_PORT];
+		[self resetHeadtrackRoll:VIEW_PORT];
 	}
-	if (([gameView isDown:gvFunctionKey4] || [gameView isDown:key_view_starboard])||(virtualView.x > view_threshold)||joyButtonState[BUTTON_VIEWSTARBOARD])
+	if (((!headtrackViewKeyMode) && ([gameView isDown:gvFunctionKey4] || [gameView isDown:key_view_starboard])) || (virtualView.x > view_threshold) || joyButtonState[BUTTON_VIEWSTARBOARD])
 	{
 		[self switchToThisView:VIEW_STARBOARD];
+		[self resetHeadtrackRoll:VIEW_STARBOARD];
 	}
-	
+
+
 	[self pollCustomViewControls];
 	
 	// Zoom scanner 'z'
@@ -3295,6 +3313,57 @@ static NSTimeInterval	time_last_frame;
 		}
 	}
 
+}
+
+
+- (void) pollHeadtrackArrowKeyControls:(double)delta_t
+{
+	MyOpenGLView		*gameView = [UNIVERSE gameView];
+	BOOL 				headtrackViewKeyMode = [gameView isShiftDown];
+	
+	if (headtrackViewKeyMode && ([gameView isDown:gvFunctionKey1] || [gameView isDown:gvFunctionKey2] || [gameView isDown:gvFunctionKey3] || [gameView isDown:gvFunctionKey4]))
+	{
+		
+		headtrack_yawing = NO;
+		headtrack_pitching = NO;
+		if ([gameView isDown:gvFunctionKey3] && [gameView isDown:gvFunctionKey4])
+		{
+			headtrackYaw = 0.0;
+		}
+		else if ([gameView isDown:gvFunctionKey3])
+		{
+			if (headtrackYaw < 0.0)  headtrackYaw = 0.0;
+			[self increase_headtrack_yaw:delta_t*headtrack_yaw_delta];
+			headtrack_yawing = YES;
+		}
+		else if ([gameView isDown:gvFunctionKey4])
+		{
+			if (headtrackYaw > 0.0)  headtrackYaw = 0.0;
+			[self decrease_headtrack_yaw:delta_t*headtrack_yaw_delta];
+			headtrack_yawing = YES;
+		}
+		
+		if ([gameView isDown:gvFunctionKey1] && [gameView isDown:gvFunctionKey2])
+		{
+			headtrackPitch = 0.0;
+		}
+		else if ([gameView isDown:gvFunctionKey2])
+		{
+			if (headtrackPitch < 0.0)  headtrackPitch = 0.0;
+			[self increase_headtrack_pitch:delta_t*headtrack_pitch_delta];
+			headtrack_pitching = YES;
+		}
+		else if ([gameView isDown:gvFunctionKey1])
+		{
+			if (headtrackPitch > 0.0)  headtrackPitch = 0.0;
+			[self decrease_headtrack_pitch:delta_t*pitch_delta];
+			headtrack_pitching = YES;
+		}
+		
+		[self applyHeadtrackRoll:headtrackPitch*delta_t andYaw:headtrackYaw*delta_t];
+		[self setDefaultViewHeadtrackData];
+		[self switchToThisView:VIEW_HEADTRACK andProcessWeaponFacing:NO];
+	}
 }
 
 
