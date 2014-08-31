@@ -6104,6 +6104,10 @@ OOINLINE BOOL EntityInRange(HPVector p1, Entity *e2, float range)
 			ms = DESC(@"starboard-view-string");
 			break;
 			
+		case VIEW_HEADTRACK:
+			ms = DESC(@"headtrack-view-string");
+			break;
+			
 		case VIEW_CUSTOM:
 			ms = [PLAYER customViewDescription];
 			break;
