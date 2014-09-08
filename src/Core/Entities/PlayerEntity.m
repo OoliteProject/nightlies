@@ -1720,7 +1720,6 @@ NSComparisonResult marketSorterByMassUnit(id a, id b, void *market);
 	max_headtrack_yaw = 0.5f;
 	headtrack_pitch_delta = 2.0f * max_headtrack_pitch;
 	headtrack_yaw_delta = 2.0f * max_headtrack_yaw;
-	headtrack_pitch_flip = NO;
 	
 	
 	max_passengers = 0;
@@ -11388,6 +11387,8 @@ static NSString *last_outfitting_key=nil;
 
 - (void) resetHeadtrackRoll:(OOViewID)viewDirection
 {
+		Quaternion q1 = kIdentityQuaternion; // defaultViewHeadtrackIdentityQuaternion;
+
 		switch (viewDirection)
 		{
 			case VIEW_FORWARD:
@@ -11395,34 +11396,39 @@ static NSString *last_outfitting_key=nil;
 				defaultViewHeadtrackQuaternion = defaultViewHeadtrackIdentityQuaternion;
 				defaultViewHeadtrackOffset = forwardViewOffset;	
 				defaultViewHeadtrackBasisForwardVector = vector_forward_from_quaternion(defaultViewHeadtrackQuaternion); // kBasisZVector;
-				headtrack_pitch_flip = NO;
 				OOLog(kOOLogParameterError, @"Reset headtrack to FORWARD");	
 				break;
 				
 			case VIEW_AFT:
-				defaultViewHeadtrackIdentityQuaternion = (Quaternion) { 0.0f, 0.0f, 1.0f, 0.0f } ;
+				// defaultViewHeadtrackIdentityQuaternion = (Quaternion) { 0.0f, 0.0f, 1.0f, 0.0f } ;
+
+				quaternion_rotate_about_y(&q1, 3.14159f);
+				defaultViewHeadtrackIdentityQuaternion = quaternion_multiply(kIdentityQuaternion, q1);
 				defaultViewHeadtrackQuaternion = defaultViewHeadtrackIdentityQuaternion;
-				defaultViewHeadtrackOffset = aftViewOffset;
 				defaultViewHeadtrackBasisForwardVector = vector_forward_from_quaternion(defaultViewHeadtrackQuaternion); // vector_flip(kBasisZVector);;
-				headtrack_pitch_flip = YES;
+				defaultViewHeadtrackOffset = aftViewOffset;
 				OOLog(kOOLogParameterError, @"Reset headtrack to AFT");	
 				break;
 				
 			case VIEW_PORT:
-				defaultViewHeadtrackIdentityQuaternion = (Quaternion) { 0.7071f, 0.0f, 0.7071f, 0.0f } ;
+				// defaultViewHeadtrackIdentityQuaternion = (Quaternion) { 0.7071f, 0.0f, 0.7071f, 0.0f } ;
+				
+				quaternion_rotate_about_y(&q1, 1.5708f);
+				defaultViewHeadtrackIdentityQuaternion = quaternion_multiply(kIdentityQuaternion, q1);
 				defaultViewHeadtrackQuaternion = defaultViewHeadtrackIdentityQuaternion;
+				defaultViewHeadtrackBasisForwardVector = vector_forward_from_quaternion(defaultViewHeadtrackQuaternion); // vector_flip(kBasisZVector);;
 				defaultViewHeadtrackOffset = portViewOffset;
-				defaultViewHeadtrackBasisForwardVector = vector_forward_from_quaternion(defaultViewHeadtrackQuaternion); // vector_flip(kBasisXVector);
-				// headtrackDefaultViewDirection = VIEW_PORT;
 				OOLog(kOOLogParameterError, @"Reset headtrack to PORT");	
 				break;
 				
 			case VIEW_STARBOARD:
-				defaultViewHeadtrackIdentityQuaternion = (Quaternion) { 0.7071f, 0.0f, -0.7071f, 0.0f } ;
+				// defaultViewHeadtrackIdentityQuaternion = (Quaternion) { 0.7071f, 0.0f, -0.7071f, 0.0f } ;
+				
+				quaternion_rotate_about_y(&q1, -1.5708f);
+				defaultViewHeadtrackIdentityQuaternion = quaternion_multiply(kIdentityQuaternion, q1);
 				defaultViewHeadtrackQuaternion = defaultViewHeadtrackIdentityQuaternion;
+				defaultViewHeadtrackBasisForwardVector = vector_forward_from_quaternion(defaultViewHeadtrackQuaternion); // vector_flip(kBasisZVector);;
 				defaultViewHeadtrackOffset = starboardViewOffset;
-				defaultViewHeadtrackBasisForwardVector = vector_forward_from_quaternion(defaultViewHeadtrackQuaternion); // kBasisXVector;
-				// headtrackDefaultViewDirection = VIEW_STARBOARD;
 				OOLog(kOOLogParameterError, @"Reset headtrack to STARBOARD");	
 				break;
 				
@@ -11437,8 +11443,8 @@ static NSString *last_outfitting_key=nil;
 	if ((climb1 == 0.0)&&(yaw1 == 0.0))
 		return;
 
-	Quaternion q1 = defaultViewHeadtrackIdentityQuaternion;
-	Quaternion q2 = defaultViewHeadtrackIdentityQuaternion;
+	Quaternion q1 = kIdentityQuaternion;
+	Quaternion q2 = kIdentityQuaternion;
 
 	Quaternion defaultViewHeadtrackQuaternionPrev = defaultViewHeadtrackQuaternion;
 
@@ -11452,11 +11458,12 @@ static NSString *last_outfitting_key=nil;
 	basis_vectors_from_quaternion(defaultViewHeadtrackQuaternionPrev, &defaultViewHeadtrackRightVector, &defaultViewHeadtrackUpVector, &defaultViewHeadtrackForwardVector);
 	double absolute_angle_to_forward = dot_product(defaultViewHeadtrackBasisForwardVector, defaultViewHeadtrackForwardVector); //== cos of the angle between r_pos and v_out
 
+
 	// Apply rotation only if total rotation is less than 90 degrees
 	if (absolute_angle_to_forward > 0.0001f)  // Hard-code value will be moved to a const or var
 		defaultViewHeadtrackQuaternion = defaultViewHeadtrackQuaternionPrev;
 
-	OOLog(kOOLogParameterError, @"Climb: %.5f\tYaw: %.5f\tForward Vector (%.5f, %.5f, %.5f)\tRight Vector (%.5f, %.5f, %.5f)\tUp Vector (%.5f, %.5f, %.5f)\t", -climb1, yaw1, defaultViewHeadtrackForwardVector.x, defaultViewHeadtrackForwardVector.y, defaultViewHeadtrackForwardVector.z, defaultViewHeadtrackRightVector.x, defaultViewHeadtrackRightVector.y, defaultViewHeadtrackRightVector.z, defaultViewHeadtrackUpVector.x, defaultViewHeadtrackUpVector.y, defaultViewHeadtrackUpVector.z);	
+	OOLog(kOOLogParameterError, @"Climb: %.5f\tYaw: %.5f\tForward Vector (%.5f, %.5f, %.5f)\tRight Vector (%.5f, %.5f, %.5f)\tUp Vector (%.5f, %.5f, %.5f)\tBasisForward Vector (%.5f, %.5f, %.5f)\t", -climb1, yaw1, defaultViewHeadtrackForwardVector.x, defaultViewHeadtrackForwardVector.y, defaultViewHeadtrackForwardVector.z, defaultViewHeadtrackRightVector.x, defaultViewHeadtrackRightVector.y, defaultViewHeadtrackRightVector.z, defaultViewHeadtrackUpVector.x, defaultViewHeadtrackUpVector.y, defaultViewHeadtrackUpVector.z, defaultViewHeadtrackBasisForwardVector.x, defaultViewHeadtrackBasisForwardVector.y, defaultViewHeadtrackBasisForwardVector.z);	
 }
 
 
