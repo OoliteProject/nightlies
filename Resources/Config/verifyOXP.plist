@@ -203,7 +203,7 @@
 			"forward_weapon_type",
 			"aft_weapon_type",
 			"port_weapon_type",
-			"starboard_weapon_type",
+			"starboard_weapon_type",	//	"headtrack_weapon_type",	// Head track mounted weapons not implemented yet. --Getafix 20140828
 			"weapon_energy",
 			"weapon_range", //added 2010-10-31 by cmdr_james for variable range plasma turrets
 			"scanner_range",
@@ -256,7 +256,7 @@
 			"weapon_position_forward",
 			"weapon_position_aft",
 			"weapon_position_port",
-			"weapon_position_starboard",
+			"weapon_position_starboard",	//	"weapon_position_headtrack",	// Head track mounted weapons not implemented yet. --Getafix 20140828
 			"weapon_facings",
 			"weapon_offset_x",
 			"scoop_position",
@@ -327,6 +327,7 @@
 			"view_position_aft",
 			"view_position_port",
 			"view_position_starboard",
+			"view_position_headtrack",
 			"custom_views"
 		);
 	};
