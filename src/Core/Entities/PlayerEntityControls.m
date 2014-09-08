@@ -239,6 +239,11 @@ static NSTimeInterval	time_last_frame;
 	LOAD_KEY_SETTING(key_view_port,				'3'			);
 	LOAD_KEY_SETTING(key_view_starboard,		'4'			);
 
+	LOAD_KEY_SETTING(key_view_headtrackPitchUp,		gvFunctionKey1		);
+	LOAD_KEY_SETTING(key_view_headtrackPitchDown,	gvFunctionKey2		);
+	LOAD_KEY_SETTING(key_view_headtrackYawLeft,		gvFunctionKey3		);
+	LOAD_KEY_SETTING(key_view_headtrackYawRight,	gvFunctionKey4		);
+
 	LOAD_KEY_SETTING(key_gui_screen_status,		'5'			);
 	LOAD_KEY_SETTING(key_gui_chart_screens,		'6'			);
 	LOAD_KEY_SETTING(key_gui_system_data,		'7'			);
@@ -836,7 +841,7 @@ static NSTimeInterval	time_last_frame;
 				view = VIEW_STARBOARD;
 				[self resetHeadtrackRoll:VIEW_STARBOARD];
 			}
-			if (headtrackViewKeyMode && ([gameView isDown:gvFunctionKey1] || [gameView isDown:gvFunctionKey2] || [gameView isDown:gvFunctionKey3] || [gameView isDown:gvFunctionKey4]))
+			if (headtrackViewKeyMode && ([gameView isDown:key_view_headtrackPitchUp] || [gameView isDown:key_view_headtrackPitchDown] || [gameView isDown:key_view_headtrackYawLeft] || [gameView isDown:key_view_headtrackYawRight]))
 			{
 				view = VIEW_HEADTRACK;
 			}
@@ -3512,39 +3517,40 @@ static NSTimeInterval	time_last_frame;
 	MyOpenGLView		*gameView = [UNIVERSE gameView];
 	BOOL 				headtrackViewKeyMode = [gameView isShiftDown];
 	
-	if (headtrackViewKeyMode && ([gameView isDown:gvFunctionKey1] || [gameView isDown:gvFunctionKey2] || [gameView isDown:gvFunctionKey3] || [gameView isDown:gvFunctionKey4]))
+	if (headtrackViewKeyMode && ([gameView isDown:key_view_headtrackPitchUp] || [gameView isDown:key_view_headtrackPitchDown] || [gameView isDown:key_view_headtrackYawLeft] || [gameView isDown:key_view_headtrackYawRight]))
 	{
 		
 		headtrack_yawing = NO;
 		headtrack_pitching = NO;
-		if ([gameView isDown:gvFunctionKey3] && [gameView isDown:gvFunctionKey4])
+		headtrack_rolling = NO;
+		if ([gameView isDown:key_view_headtrackYawLeft] && [gameView isDown:key_view_headtrackYawRight])
 		{
 			headtrackYaw = 0.0;
 		}
-		else if ([gameView isDown:gvFunctionKey3])
+		else if ([gameView isDown:key_view_headtrackYawLeft])
 		{
 			if (headtrackYaw < 0.0)  headtrackYaw = 0.0;
 			[self increase_headtrack_yaw:delta_t*headtrack_yaw_delta];
 			headtrack_yawing = YES;
 		}
-		else if ([gameView isDown:gvFunctionKey4])
+		else if ([gameView isDown:key_view_headtrackYawRight])
 		{
 			if (headtrackYaw > 0.0)  headtrackYaw = 0.0;
 			[self decrease_headtrack_yaw:delta_t*headtrack_yaw_delta];
 			headtrack_yawing = YES;
 		}
 		
-		if ([gameView isDown:gvFunctionKey1] && [gameView isDown:gvFunctionKey2])
+		if ([gameView isDown:key_view_headtrackPitchUp] && [gameView isDown:key_view_headtrackPitchDown])
 		{
 			headtrackPitch = 0.0;
 		}
-		else if ([gameView isDown:gvFunctionKey2])
+		else if ([gameView isDown:key_view_headtrackPitchDown])
 		{
 			if (headtrackPitch < 0.0)  headtrackPitch = 0.0;
 			[self increase_headtrack_pitch:delta_t*headtrack_pitch_delta];
 			headtrack_pitching = YES;
 		}
-		else if ([gameView isDown:gvFunctionKey1])
+		else if ([gameView isDown:key_view_headtrackPitchUp])
 		{
 			if (headtrackPitch > 0.0)  headtrackPitch = 0.0;
 			[self decrease_headtrack_pitch:delta_t*pitch_delta];
@@ -3616,8 +3622,8 @@ static NSTimeInterval	time_last_frame;
 				{
 					target_chart_zoom = saved_chart_zoom;
 				}
-				target_chart_centre.x = cursor_coordinates.x = target_system_seed.d;
-				target_chart_centre.y = cursor_coordinates.y = target_system_seed.b;
+				target_chart_centre.x = cursor_coordinates.x = target_system_seed.d; 
+				target_chart_centre.y = cursor_coordinates.y = target_system_seed.b; 
 				[self setGuiToShortRangeChartScreen];
 			}
 		}
@@ -4365,7 +4371,7 @@ static BOOL autopilot_pause;
 			case VIEW_STARBOARD:
 				facing = WEAPON_FACING_STARBOARD;
 				break;
-				
+
 			default:
 				break;
 		}

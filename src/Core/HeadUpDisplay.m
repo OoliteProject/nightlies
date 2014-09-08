@@ -158,13 +158,7 @@ enum
 - (void) drawFPSInfoCounter:(NSDictionary *)info;
 - (void) drawScoopStatus:(NSDictionary *)info;
 - (void) drawStickSensitivityIndicator:(NSDictionary *)info;
-- (void) drawCustomBar:(NSDictionary *)info;
-- (void) drawCustomText:(NSDictionary *)info;
-- (void) drawCustomIndicator:(NSDictionary *)info;
-- (void) drawCustomLight:(NSDictionary *)info;
 
-- (void) drawSurroundInternal:(NSDictionary *)info color:(const GLfloat[4])color;
-- (void) drawSurround:(NSDictionary *)info;
 - (void) drawGreenSurround:(NSDictionary *)info;
 - (void) drawYellowSurround:(NSDictionary *)info;
 
@@ -954,13 +948,6 @@ OOINLINE void GLColorWithOverallAlpha(const GLfloat *color, GLfloat alpha)
 		}
 	}
 
-	BOOL viewOnly = [info oo_unsignedIntForKey:VIEWSCREEN_KEY defaultValue:NO];
-	// 1=docked, 2=green, 4=yellow, 8=red
-	if (viewOnly && [PLAYER guiScreen] != GUI_SCREEN_MAIN)
-	{
-		return;
-	}
-
 	// check association with hidden dials
 	if ([self hasHidden:[info oo_stringForKey:DIAL_REQUIRED_KEY defaultValue:nil]])
 	{
@@ -1024,16 +1011,14 @@ OOINLINE void GLColorWithOverallAlpha(const GLfloat *color, GLfloat alpha)
 	if (alertMask < 15)
 	{
 		OOAlertCondition alertCondition = [PLAYER alertCondition];
+		/* Because one of the items here is the scanner, which changes
+		 * the alert condition, this may give inconsistent results
+		 * mid-frame. This is unlikely to be crucial, but it's yet
+		 * another reason to get around to separating out scanner
+		 * display and alert level calculation - CIM */
 		if (~alertMask & (1 << alertCondition)) {
 			return;
 		}
-	}
-
-	BOOL viewOnly = [info oo_unsignedIntForKey:VIEWSCREEN_KEY defaultValue:NO];
-	// 1=docked, 2=green, 4=yellow, 8=red
-	if (viewOnly && [PLAYER guiScreen] != GUI_SCREEN_MAIN)
-	{
-		return;
 	}
 
 	if (EXPECT_NOT([self hasHidden:[sCurrentDrawItem objectAtIndex:WIDGET_SELECTOR_NAME]]))
@@ -1700,146 +1685,6 @@ OOINLINE void SetCompassBlipColor(GLfloat relativeZ, GLfloat alpha)
 
 	OOGLPopModelView();
 #endif
-}
-
-
-- (void) drawCustomBar:(NSDictionary *)info
-{
-	int					x, y;
-	NSSize				siz;
-	BOOL				draw_surround;
-	GLfloat				alpha = overallAlpha;
-	GLfloat				ds = OOClamp_0_1_f([PLAYER dialCustomFloat:[info oo_stringForKey:CUSTOM_DIAL_KEY]]);
-	struct CachedInfo	cached;
-	
-	[(NSValue *)[sCurrentDrawItem objectAtIndex:WIDGET_CACHE] getValue:&cached];
-	
-	x = useDefined(cached.x, 0) + [[UNIVERSE gameView] x_offset] * cached.x0;
-	y = useDefined(cached.y, 0) + [[UNIVERSE gameView] y_offset] * cached.y0;
-	siz.width = useDefined(cached.width, 50);
-	siz.height = useDefined(cached.height, 8);
-	alpha *= cached.alpha;
-	
-	draw_surround = [info oo_boolForKey:DRAW_SURROUND_KEY defaultValue:NO];
-	
-	SET_COLOR_SURROUND(green_color);
-	if (draw_surround)
-	{
-		// draw custom surround
-		hudDrawSurroundAt(x, y, z1, siz);
-	}
-	// draw custom bar
-	if (ds > .75)
-	{
-		SET_COLOR_HIGH(green_color);
-	}
-	else if (ds > .25)
-	{
-		SET_COLOR_MEDIUM(yellow_color);
-	}
-	else
-	{
-		SET_COLOR_LOW(red_color);
-	}
-
-	hudDrawBarAt(x, y, z1, siz, ds);
-}
-
-
-- (void) drawCustomText:(NSDictionary *)info
-{
-	int					x, y;
-	NSSize				size;
-	GLfloat				alpha = overallAlpha;
-	NSString			*text = [PLAYER dialCustomString:[info oo_stringForKey:CUSTOM_DIAL_KEY]];
-	struct CachedInfo	cached;
-	
-	[(NSValue *)[sCurrentDrawItem objectAtIndex:WIDGET_CACHE] getValue:&cached];
-	
-	x = useDefined(cached.x, 0) + [[UNIVERSE gameView] x_offset] * cached.x0;
-	y = useDefined(cached.y, 0) + [[UNIVERSE gameView] y_offset] * cached.y0;
-	alpha *= cached.alpha;
-	
-	SET_COLOR(yellow_color);
-
-	size.width = useDefined(cached.width, 10.0f);
-	size.height = useDefined(cached.height, 10.0f);
-
-	if ([info oo_intForKey:@"align"] == 1)
-	{
-		OODrawStringAligned(text, x, y, z1, size, YES);
-	}
-	else
-	{
-		OODrawStringAligned(text, x, y, z1, size, NO);
-	}
-
-}
-
-
-- (void) drawCustomIndicator:(NSDictionary *)info
-{
-	int					x, y;
-	NSSize				siz;
-	BOOL				draw_surround;
-	GLfloat				alpha = overallAlpha;
-	GLfloat				iv = OOClamp_n1_1_f([PLAYER dialCustomFloat:[info oo_stringForKey:CUSTOM_DIAL_KEY]]);
-
-	struct CachedInfo	cached;
-	
-	[(NSValue *)[sCurrentDrawItem objectAtIndex:WIDGET_CACHE] getValue:&cached];
-	
-	x = useDefined(cached.x, 0) + [[UNIVERSE gameView] x_offset] * cached.x0;
-	y = useDefined(cached.y, 0) + [[UNIVERSE gameView] y_offset] * cached.y0;
-	siz.width = useDefined(cached.width, 50);
-	siz.height = useDefined(cached.height, 8);
-	alpha *= cached.alpha;
-	draw_surround = [info oo_boolForKey:DRAW_SURROUND_KEY defaultValue:NO];
-	
-	if (draw_surround)
-	{
-		// draw custom surround
-		SET_COLOR_SURROUND(green_color);
-		hudDrawSurroundAt(x, y, z1, siz);
-	}
-	// draw custom indicator
-	SET_COLOR(yellow_color);
-	hudDrawIndicatorAt(x, y, z1, siz, iv);
-}
-
-
-- (void) drawCustomLight:(NSDictionary *)info
-{
-	int					x, y;
-	NSSize				siz;
-	GLfloat				alpha = overallAlpha;
-
-	struct CachedInfo	cached;
-	
-	[(NSValue *)[sCurrentDrawItem objectAtIndex:WIDGET_CACHE] getValue:&cached];
-	
-	x = useDefined(cached.x, 0) + [[UNIVERSE gameView] x_offset] * cached.x0;
-	y = useDefined(cached.y, 0) + [[UNIVERSE gameView] y_offset] * cached.y0;
-	siz.width = useDefined(cached.width, 8);
-	siz.height = useDefined(cached.height, 8);
-	alpha *= cached.alpha;
-	
-	GLfloat light_color[4] = { 0.25, 0.25, 0.25, 0.0};
-	
-	OOColor *color = [PLAYER dialCustomColor:[info oo_stringForKey:CUSTOM_DIAL_KEY]];
-	[color getRed:&light_color[0]
-			green:&light_color[1]
-			 blue:&light_color[2]
-			alpha:&light_color[3]];
-
-	GLColorWithOverallAlpha(light_color, alpha);
-	OOGLBEGIN(GL_POLYGON);
-	hudDrawStatusIconAt(x, y, z1, siz);
-	OOGLEND();
-	OOGL(glColor4f(0.25, 0.25, 0.25, alpha));
-	OOGLBEGIN(GL_LINE_LOOP);
-		hudDrawStatusIconAt(x, y, z1, siz);
-	OOGLEND();
 }
 
 
@@ -3093,25 +2938,25 @@ static OOPolygonSprite *IconForMissileRole(NSString *role)
 }
 
 
-- (void) drawSurround:(NSDictionary *)info
-{
-	GLfloat	itemColor[4] = { 0.0f, 1.0f, 0.0f, 1.0f };
-	id		colorDesc = [info objectForKey:COLOR_KEY];
-	if (colorDesc != nil)
-	{
-		OOColor *color = [OOColor colorWithDescription:colorDesc];
-		if (color != nil)
-		{
-			itemColor[0] = [color redComponent];
-			itemColor[1] = [color greenComponent];
-			itemColor[2] = [color blueComponent];
-		}
-	}
-
-	[self drawSurroundInternal:info color:itemColor];
-}
-
-
+ - (void) drawSurround:(NSDictionary *)info 
+ { 
+	GLfloat	itemColor[4] = { 0.0f, 1.0f, 0.0f, 1.0f }; 
+	id		colorDesc = [info objectForKey:COLOR_KEY]; 
+	if (colorDesc != nil) 
+	{ 
+		OOColor *color = [OOColor colorWithDescription:colorDesc]; 
+		if (color != nil) 
+		{ 
+			itemColor[0] = [color redComponent]; 
+			itemColor[1] = [color greenComponent]; 
+			itemColor[2] = [color blueComponent]; 
+		} 
+	} 
+	
+	[self drawSurroundInternal:info color:itemColor]; 
+ } 
+ 
+ 
 - (void) drawGreenSurround:(NSDictionary *)info
 {
 	[self drawSurroundInternal:info color:green_color];

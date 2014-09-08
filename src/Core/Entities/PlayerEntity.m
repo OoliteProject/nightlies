@@ -955,9 +955,6 @@ NSComparisonResult marketSorterByMassUnit(id a, id b, void *market);
 	[multiFunctionDisplaySettings release];
 	multiFunctionDisplaySettings = [[NSMutableArray alloc] init];
 
-	[customDialSettings release];
-	customDialSettings = [[NSMutableDictionary alloc] init];
-
 	[[UNIVERSE gameView] resetTypedString];
 	// must do this on game load now caches an entire chart
 	[UNIVERSE resetSystemDataCache];
@@ -1651,9 +1648,6 @@ NSComparisonResult marketSorterByMassUnit(id a, id b, void *market);
 	[multiFunctionDisplaySettings release];
 	multiFunctionDisplaySettings = [[NSMutableArray alloc] init];
 
-	[customDialSettings release];
-	customDialSettings = [[NSMutableDictionary alloc] init];
-
 	[self switchHudTo:@"hud.plist"];	
 	scanner_zoom_rate = 0.0f;
 	longRangeChartMode = OOLRC_MODE_NORMAL;
@@ -1720,6 +1714,7 @@ NSComparisonResult marketSorterByMassUnit(id a, id b, void *market);
 	max_headtrack_yaw = 0.5f;
 	headtrack_pitch_delta = 2.0f * max_headtrack_pitch;
 	headtrack_yaw_delta = 2.0f * max_headtrack_yaw;
+	headtrack_pitch_flip = NO;
 	
 	
 	max_passengers = 0;
@@ -2011,8 +2006,10 @@ NSComparisonResult marketSorterByMassUnit(id a, id b, void *market);
 	aftViewOffset = [shipDict oo_vectorForKey:@"view_position_aft" defaultValue:aftViewOffset];
 	portViewOffset = [shipDict oo_vectorForKey:@"view_position_port" defaultValue:portViewOffset];
 	starboardViewOffset = [shipDict oo_vectorForKey:@"view_position_starboard" defaultValue:starboardViewOffset];
-	defaultViewHeadtrackOffset = [shipDict oo_vectorForKey:@"view_position_headtrack" defaultValue:defaultViewHeadtrackOffset];
-	defaultViewHeadtrackQuaternion = kIdentityQuaternion;
+	defaultViewHeadtrackOffset = [shipDict oo_vectorForKey:@"view_position_forward" defaultValue:defaultViewHeadtrackOffset];
+	defaultViewHeadtrackIdentityQuaternion = kIdentityQuaternion;
+	defaultViewHeadtrackQuaternion = defaultViewHeadtrackIdentityQuaternion;
+	defaultViewHeadtrackBasisForwardVector = kBasisZVector;
 	
 	[self setDefaultCustomViews];
 	
@@ -2045,10 +2042,6 @@ NSComparisonResult marketSorterByMassUnit(id a, id b, void *market);
 {
 	DESTROY(compassTarget);
 	DESTROY(hud);
-	DESTROY(multiFunctionDisplayText);
-	DESTROY(multiFunctionDisplaySettings);
-	DESTROY(customDialSettings);
-
 	DESTROY(commLog);
 	DESTROY(keyconfig_settings);
 	DESTROY(target_memory);
@@ -3134,9 +3127,11 @@ NSComparisonResult marketSorterByMassUnit(id a, id b, void *market);
 }
 
 
+// Head Track Pitch Down
 - (void) increase_headtrack_pitch:(double) delta
 {
 	headtrackPitch = max_headtrack_pitch;
+
 /*
 	if (headtrackPitch < max_headtrack_pitch)
 		headtrackPitch += delta;
@@ -3146,9 +3141,11 @@ NSComparisonResult marketSorterByMassUnit(id a, id b, void *market);
 }
 
 
+// Head Track Pitch Up
 - (void) decrease_headtrack_pitch:(double) delta
 {
 	headtrackPitch = -max_headtrack_pitch;
+
 /*
 	if (headtrackPitch > -max_headtrack_pitch)
 		headtrackPitch -= delta;
@@ -3158,9 +3155,11 @@ NSComparisonResult marketSorterByMassUnit(id a, id b, void *market);
 }
 
 
+// Head Track Yaw Left
 - (void) increase_headtrack_yaw:(double) delta
 {
 	headtrackYaw = max_headtrack_yaw;
+
 /*
 	if (headtrackYaw < max_headtrack_yaw)
 		headtrackYaw += delta;
@@ -3170,14 +3169,56 @@ NSComparisonResult marketSorterByMassUnit(id a, id b, void *market);
 }
 
 
+// Head Track Yaw Right
 - (void) decrease_headtrack_yaw:(double) delta
 {
 		headtrackYaw = -max_headtrack_yaw;
+
 /*
 	if (headtrackYaw > -max_headtrack_yaw)
 		headtrackYaw -= delta;
 	if (headtrackYaw < -max_headtrack_yaw)
 		headtrackYaw = -max_headtrack_yaw;
+*/
+}
+
+
+// Head Track Roll Right
+- (void) increase_headtrack_roll:(double) delta
+{
+/*
+	if (headtrack_roll_total < headtrack_roll_max)
+	{
+		headtrack_roll_total += delta;
+		headtrackRoll = delta;
+	} 
+	else 
+	{
+		headtrack_roll_total = headtrack_roll_max;
+		headtrackRoll = 0.0f;
+		headtrack_rolling = NO;
+	}
+	OOLog(kOOLogParameterError, @"Rolling Right - headtrack_roll_total: %.5f", headtrack_roll_total);	
+*/
+}
+
+
+// Head Track Roll Left
+- (void) decrease_headtrack_roll:(double) delta
+{
+/*
+	if (headtrack_roll_total > -headtrack_roll_max)
+	{
+		headtrack_roll_total -= delta;
+		headtrackRoll = -delta;
+	} 
+	else 
+	{
+		headtrack_roll_total = -headtrack_roll_max;
+		headtrackRoll = 0.0f;
+		headtrack_rolling = NO;
+	}
+	OOLog(kOOLogParameterError, @"Rolling Left - headtrack_roll_total: %.5f", headtrack_roll_total);	
 */
 }
 
@@ -3193,7 +3234,13 @@ NSComparisonResult marketSorterByMassUnit(id a, id b, void *market);
 	return headtrackYaw;
 }
 
-/*
+
+- (GLfloat) headtrackRoll
+{
+	return headtrackRoll;
+}
+
+
 - (GLfloat) maxHeadtrackPitch
 {
 	return max_headtrack_pitch;
@@ -3204,7 +3251,13 @@ NSComparisonResult marketSorterByMassUnit(id a, id b, void *market);
 {
 	return max_headtrack_yaw;
 }
-*/
+
+
+- (GLfloat) maxHeadtrackRoll
+{
+	return max_headtrack_roll;
+}
+
 
 - (void) updateTrumbles:(OOTimeDelta)delta_t
 {
@@ -4106,30 +4159,6 @@ NSComparisonResult marketSorterByMassUnit(id a, id b, void *market);
 	}
 	
 	return YES;
-}
-
-
-- (float) dialCustomFloat:(NSString *)dialKey
-{
-	return [customDialSettings oo_floatForKey:dialKey defaultValue:0.0];
-}
-
-
-- (NSString *) dialCustomString:(NSString *)dialKey
-{
-	return [customDialSettings oo_stringForKey:dialKey defaultValue:@""];
-}
-
-
-- (OOColor *) dialCustomColor:(NSString *)dialKey
-{
-	return [OOColor colorWithDescription:[customDialSettings objectForKey:dialKey]];
-}
-
-
-- (void) setDialCustom:(id)value forKey:(NSString *)dialKey
-{
-	[customDialSettings setObject:value forKey:dialKey];
 }
 
 
@@ -6656,14 +6685,6 @@ NSComparisonResult marketSorterByMassUnit(id a, id b, void *market);
 	scanner_zoom_rate = 0.0f;
 	currentWeaponFacing = WEAPON_FACING_FORWARD;
 	
-	forward_weapon_temp = 0.0f;
-	aft_weapon_temp = 0.0f;
-	port_weapon_temp = 0.0f;
-	starboard_weapon_temp = 0.0f;
-	
-	forward_shield = [self maxForwardShieldLevel];
-	aft_shield = [self maxAftShieldLevel];
-
 	[self clearTargetMemory];
 	[self setShowDemoShips:NO];
 	[UNIVERSE setDisplayText:NO];
@@ -9074,6 +9095,8 @@ static NSString *last_outfitting_key=nil;
 	tab_stops[5] = 455;
 	[gui setTabStops:tab_stops];
 
+	// For the time being do not show the head track keys in the 
+	// key settings screen. --Getafix 2014-08-27
 	NSArray *keys = [NSArray arrayWithObjects:
 		 @"key_roll_left",@"key_pitch_forward",@"key_yaw_left",
 		 @"key_roll_right",@"key_pitch_back",@"key_yaw_right",
@@ -10727,7 +10750,7 @@ static NSString *last_outfitting_key=nil;
 	aftViewOffset = make_vector(0.0f, 0.0f, boundingBox.min.z + halfLength);
 	portViewOffset = make_vector(boundingBox.min.x + halfWidth, 0.0f, 0.0f);
 	starboardViewOffset = make_vector(boundingBox.max.x - halfWidth, 0.0f, 0.0f);
-	defaultViewHeadtrackOffset = kZeroVector;
+	defaultViewHeadtrackOffset = forwardViewOffset;
 	customViewOffset = kZeroVector;
 }
 
@@ -11326,19 +11349,39 @@ static NSString *last_outfitting_key=nil;
 		switch (viewDirection)
 		{
 			case VIEW_FORWARD:
-				defaultViewHeadtrackQuaternion = (Quaternion) { 1.0f, 0.0f, 0.0f, 0.0f } ;
+				defaultViewHeadtrackIdentityQuaternion = kIdentityQuaternion; // (Quaternion) { 1.0f, 0.0f, 0.0f, 0.0f } ;
+				defaultViewHeadtrackQuaternion = defaultViewHeadtrackIdentityQuaternion;
+				defaultViewHeadtrackOffset = forwardViewOffset;	
+				defaultViewHeadtrackBasisForwardVector = vector_forward_from_quaternion(defaultViewHeadtrackQuaternion); // kBasisZVector;
+				headtrack_pitch_flip = NO;
+				OOLog(kOOLogParameterError, @"Reset headtrack to FORWARD");	
 				break;
 				
 			case VIEW_AFT:
-				defaultViewHeadtrackQuaternion = (Quaternion) { 0.0f, 0.0f, 1.0f, 0.0f } ;
+				defaultViewHeadtrackIdentityQuaternion = (Quaternion) { 0.0f, 0.0f, 1.0f, 0.0f } ;
+				defaultViewHeadtrackQuaternion = defaultViewHeadtrackIdentityQuaternion;
+				defaultViewHeadtrackOffset = aftViewOffset;
+				defaultViewHeadtrackBasisForwardVector = vector_forward_from_quaternion(defaultViewHeadtrackQuaternion); // vector_flip(kBasisZVector);;
+				headtrack_pitch_flip = YES;
+				OOLog(kOOLogParameterError, @"Reset headtrack to AFT");	
 				break;
 				
 			case VIEW_PORT:
-				defaultViewHeadtrackQuaternion = (Quaternion) { 0.7071f, 0.0f, 0.7071f, 0.0f } ;
+				defaultViewHeadtrackIdentityQuaternion = (Quaternion) { 0.7071f, 0.0f, 0.7071f, 0.0f } ;
+				defaultViewHeadtrackQuaternion = defaultViewHeadtrackIdentityQuaternion;
+				defaultViewHeadtrackOffset = portViewOffset;
+				defaultViewHeadtrackBasisForwardVector = vector_forward_from_quaternion(defaultViewHeadtrackQuaternion); // vector_flip(kBasisXVector);
+				// headtrackDefaultViewDirection = VIEW_PORT;
+				OOLog(kOOLogParameterError, @"Reset headtrack to PORT");	
 				break;
 				
 			case VIEW_STARBOARD:
-				defaultViewHeadtrackQuaternion = (Quaternion) { 0.7071f, 0.0f, -0.7071f, 0.0f } ;
+				defaultViewHeadtrackIdentityQuaternion = (Quaternion) { 0.7071f, 0.0f, -0.7071f, 0.0f } ;
+				defaultViewHeadtrackQuaternion = defaultViewHeadtrackIdentityQuaternion;
+				defaultViewHeadtrackOffset = starboardViewOffset;
+				defaultViewHeadtrackBasisForwardVector = vector_forward_from_quaternion(defaultViewHeadtrackQuaternion); // kBasisXVector;
+				// headtrackDefaultViewDirection = VIEW_STARBOARD;
+				OOLog(kOOLogParameterError, @"Reset headtrack to STARBOARD");	
 				break;
 				
 			default:
@@ -11352,14 +11395,26 @@ static NSString *last_outfitting_key=nil;
 	if ((climb1 == 0.0)&&(yaw1 == 0.0))
 		return;
 
-	Quaternion q1 = kIdentityQuaternion;
+	Quaternion q1 = defaultViewHeadtrackIdentityQuaternion;
+	Quaternion q2 = defaultViewHeadtrackIdentityQuaternion;
+
+	Quaternion defaultViewHeadtrackQuaternionPrev = defaultViewHeadtrackQuaternion;
 
 	if (climb1 && headtrack_pitching)
 		quaternion_rotate_about_x(&q1, -climb1);
 	if (yaw1 && headtrack_yawing)
-		quaternion_rotate_about_y(&q1, yaw1);
+		quaternion_rotate_about_y(&q2, yaw1);
 
-	defaultViewHeadtrackQuaternion = quaternion_multiply(q1, defaultViewHeadtrackQuaternion);
+	defaultViewHeadtrackQuaternionPrev = quaternion_multiply(quaternion_multiply(q1, defaultViewHeadtrackQuaternionPrev), q2);
+
+	basis_vectors_from_quaternion(defaultViewHeadtrackQuaternionPrev, &defaultViewHeadtrackRightVector, &defaultViewHeadtrackUpVector, &defaultViewHeadtrackForwardVector);
+	double absolute_angle_to_forward = dot_product(defaultViewHeadtrackBasisForwardVector, defaultViewHeadtrackForwardVector); //== cos of the angle between r_pos and v_out
+
+	// Apply rotation only if total rotation is less than 90 degrees
+	if (absolute_angle_to_forward > 0.0001f)  // Hard-code value will be moved to a const or var
+		defaultViewHeadtrackQuaternion = defaultViewHeadtrackQuaternionPrev;
+
+	OOLog(kOOLogParameterError, @"Climb: %.5f\tYaw: %.5f\tForward Vector (%.5f, %.5f, %.5f)\tRight Vector (%.5f, %.5f, %.5f)\tUp Vector (%.5f, %.5f, %.5f)\t", -climb1, yaw1, defaultViewHeadtrackForwardVector.x, defaultViewHeadtrackForwardVector.y, defaultViewHeadtrackForwardVector.z, defaultViewHeadtrackRightVector.x, defaultViewHeadtrackRightVector.y, defaultViewHeadtrackRightVector.z, defaultViewHeadtrackUpVector.x, defaultViewHeadtrackUpVector.y, defaultViewHeadtrackUpVector.z);	
 }
 
 
@@ -11368,13 +11423,9 @@ static NSString *last_outfitting_key=nil;
 	Quaternion q1 = defaultViewHeadtrackQuaternion;
 	q1.w = -q1.w;
 	defaultViewHeadtrackMatrix = OOMatrixForQuaternionRotation(q1);
-	
-	defaultViewHeadtrackRightVector = vector_right_from_quaternion(defaultViewHeadtrackQuaternion);
-	defaultViewHeadtrackUpVector = vector_up_from_quaternion(defaultViewHeadtrackQuaternion);
-	defaultViewHeadtrackForwardVector = vector_forward_from_quaternion(defaultViewHeadtrackQuaternion);
-	
+	basis_vectors_from_quaternion(defaultViewHeadtrackQuaternion, &defaultViewHeadtrackRightVector, &defaultViewHeadtrackUpVector, &defaultViewHeadtrackForwardVector);
+
 	// customViewDescription = [viewDict oo_stringForKey:@"view_description"];
-	
 }
 
 

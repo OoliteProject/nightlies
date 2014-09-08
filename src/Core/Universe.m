@@ -1514,13 +1514,13 @@ static GLfloat	docked_light_specular[4]	= { DOCKED_ILLUM_LEVEL, DOCKED_ILLUM_LEV
 		}
 		else if ([code isEqualToString:@"OUTER_SYSTEM"])
 		{
-			result = OORandomPositionInShell([sun position],HPdistance([sun position],[planet position]),HPdistance([sun position],[planet position])*10.0); // no more than 10 AU out
+			result = OORandomPositionInShell([sun position],HPdistance([sun position],[planet position]),10000000); // no more than 10^7 metres from sun
 			result = OOProjectHPVectorToPlane(result,kZeroHPVector,HPcross_product([sun position],[planet position]));
 			result = HPvector_add(result,OOHPVectorRandomSpatial(0.01*HPdistance(result,[sun position]))); // within 1% of plane
 		}
 		else if ([code isEqualToString:@"OUTER_SYSTEM_OFFPLANE"])
 		{
-			result = OORandomPositionInShell([sun position],HPdistance([sun position],[planet position]),HPdistance([sun position],[planet position])*10.0); // no more than 10 AU out
+			result = OORandomPositionInShell([sun position],HPdistance([sun position],[planet position]),10000000); // no more than 10^7 metres from sun
 		}
 		else
 		{
@@ -4309,7 +4309,7 @@ static const OOMatrix	starboard_matrix =
 			wasDisplayGUI = displayGUI;
 			
 			// use a non-mutable copy so this can't be changed under us.
-			for (i = ((viewDirection == VIEW_HEADTRACK) ? 1 : 0); i < ent_count; i++)
+			for (i = 0; i < ent_count; i++)
 			{
 				/* BUG: this list is ordered nearest to furthest from
 				 * the player, and we just assume that the camera is

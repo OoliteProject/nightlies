@@ -310,7 +310,8 @@ typedef enum
 #define AFT_FACING_STRING				DESC(@"aft-facing-string")
 #define PORT_FACING_STRING				DESC(@"port-facing-string")
 #define STARBOARD_FACING_STRING			DESC(@"starboard-facing-string")
-#define HEADTRACK_FACING_STRING			DESC(@"headtrack-facing-string")
+#define HEADTRACK_FACING_STRING			DESC(@"headtrack-facing-string") // This is only used for getting weapons related to the head track view.
+																		 // No support for head track mounted weapons has been developed yet. --Getafix 2014-08-27
 #define KEY_REPEAT_INTERVAL				0.20
 
 #define PLAYER_SHIP_CLOCK_START			(2084004 * 86400.0)
@@ -440,7 +441,6 @@ typedef enum
 	NSMutableDictionary		*multiFunctionDisplayText;
 	NSMutableArray			*multiFunctionDisplaySettings;
 	NSUInteger				activeMFD;
-	NSMutableDictionary		*customDialSettings;
 
 	GLfloat					roll_delta, pitch_delta, yaw_delta;
 	GLfloat					launchRoll;
@@ -522,6 +522,11 @@ typedef enum
 	OOKeyCode				key_view_aft;			// && options menu
 	OOKeyCode				key_view_port;			// && equipment screen
 	OOKeyCode				key_view_starboard;		// && interfaces screen
+
+	OOKeyCode				key_view_headtrackPitchUp;
+	OOKeyCode				key_view_headtrackPitchDown;
+	OOKeyCode				key_view_headtrackYawLeft;
+	OOKeyCode				key_view_headtrackYawRight;
 
 	OOKeyCode				key_gui_screen_status;
 	OOKeyCode				key_gui_chart_screens;
@@ -614,21 +619,26 @@ typedef enum
 	
 	// position of viewports
 	Vector					forwardViewOffset, aftViewOffset, portViewOffset, starboardViewOffset, headtrackViewOffset;
-	Vector					headtrackViewVector;
+	Vector					defaultViewHeadtrackBasisForwardVector;
 	Vector					_sysInfoLight;
 	
 	// custom view points
-	Quaternion				defaultViewHeadtrackQuaternion;
+	Quaternion				defaultViewHeadtrackIdentityQuaternion, defaultViewHeadtrackQuaternion;
+	
 	OOMatrix				defaultViewHeadtrackMatrix;
 	Vector					defaultViewHeadtrackOffset, defaultViewHeadtrackForwardVector, defaultViewHeadtrackUpVector, defaultViewHeadtrackRightVector;
 	
 	GLfloat					max_headtrack_pitch;		// maximum head pitch rate - seems useless for keyboard, but we keep it just in case it will be needed for joystick or head track devices  (1.0)
 	GLfloat					max_headtrack_yaw;
+	GLfloat					max_headtrack_roll;
 	GLfloat					headtrackPitch;			// current head pitch rate
 	GLfloat					headtrackYaw;			// current head yaw rate
-	GLfloat					headtrack_pitch_delta, headtrack_yaw_delta;
-	unsigned				headtrack_pitching: 1, headtrack_yawing: 1;
-
+	GLfloat					headtrackRoll;			// current head roll rate
+	GLfloat					headtrack_pitch_delta, headtrack_yaw_delta, headtrack_roll_delta;
+	unsigned				headtrack_pitching: 1, headtrack_yawing: 1, headtrack_rolling: 1;
+	BOOL					headtrack_pitch_flip;
+	
+	
 	// trumbles
 	NSUInteger				trumbleCount;
 	OOTrumble				*trumble[PLAYER_MAX_TRUMBLES];
@@ -797,12 +807,6 @@ typedef enum
 - (HeadUpDisplay *) hud;
 - (BOOL) switchHudTo:(NSString *)hudFileName;
 - (void) resetHud;
-
-- (float) dialCustomFloat:(NSString *)dialKey;
-- (NSString *) dialCustomString:(NSString *)dialKey;
-- (OOColor *) dialCustomColor:(NSString *)dialKey;
-- (void) setDialCustom:(id)value forKey:(NSString *)key;
-
 
 - (NSArray *) multiFunctionDisplayList;
 - (NSString *) multiFunctionText:(NSUInteger) index;
@@ -1075,6 +1079,9 @@ typedef enum
 - (void)setDefaultViewHeadtrackData;
 - (void) resetHeadtrackRoll:(OOViewID)viewDirection;
 - (void) applyHeadtrackRoll:(GLfloat) climb1 andYaw:(GLfloat) yaw1;
+/*
+- (void) applyHeadtrackRoll:(GLfloat) climb1 andRoll:(GLfloat) roll1 andYaw:(GLfloat) yaw1;
+*/
 
 - (Quaternion)defaultViewHeadtrackQuaternion;
 - (OOMatrix)defaultViewHeadtrackMatrix;
@@ -1088,13 +1095,14 @@ typedef enum
 - (void) decrease_headtrack_pitch:(double)delta;
 - (void) increase_headtrack_yaw:(double)delta;
 - (void) decrease_headtrack_yaw:(double)delta;
+- (void) increase_headtrack_roll:(double)delta;
+- (void) decrease_headtrack_roll:(double)delta;
 - (GLfloat) headtrackPitch;
 - (GLfloat) headtrackYaw;
-/*
+- (GLfloat) headtrackRoll;
 - (GLfloat) maxHeadtrackPitch;
 - (GLfloat) maxHeadtrackYaw;
-*/
-
+- (GLfloat) maxHeadtrackRoll;
 
 - (NSDictionary *) missionOverlayDescriptor;
 - (NSDictionary *) missionOverlayDescriptorOrDefault;

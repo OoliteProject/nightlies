@@ -33,9 +33,9 @@
 		{	// stick sensitivity indicator
 			alpha		= 1.0;
 			selector	= "drawStickSensitivityIndicator:";
-			x		= 150;
-			y		= 75;
-			y_origin = -1;
+			x			= 150; 
+			y			= 75; 
+			y_origin	= -1; 
 			height		= 12;
 			width		= 12;
 		},
@@ -127,7 +127,7 @@
 		},
 		{	// just draws a surround 2 units around the selected size
 			height		= 40;
-			color		= "yellowColor";
+			color = "yellowColor";
 			selector	= "drawSurround:";
 			width		= 80;
 			x		= -200;

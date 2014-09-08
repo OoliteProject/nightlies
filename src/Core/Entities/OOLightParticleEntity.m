@@ -239,7 +239,24 @@ static OOTexture *sBlobTexture = nil;
 			glVertex3f(viewOffset, _diameter, -_diameter);
 			break;
 			
-		case VIEW_CUSTOM:
+		case VIEW_HEADTRACK:
+			{
+				PlayerEntity *player = PLAYER;
+				Vector vi = [player defaultViewHeadtrackRightVector];	vi.x *= _diameter;	vi.y *= _diameter;	vi.z *= _diameter;
+				Vector vj = [player defaultViewHeadtrackUpVector];		vj.x *= _diameter;	vj.y *= _diameter;	vj.z *= _diameter;
+				Vector vk = [player defaultViewHeadtrackForwardVector];	vk.x *= viewOffset;	vk.y *= viewOffset;	vk.z *= viewOffset;
+				glTexCoord2f(0.0, 1.0);
+				glVertex3f(-vi.x -vj.x -vk.x, -vi.y -vj.y -vk.y, -vi.z -vj.z -vk.z);
+				glTexCoord2f(1.0, 1.0);
+				glVertex3f(+vi.x -vj.x -vk.x, +vi.y -vj.y -vk.y, +vi.z -vj.z -vk.z);
+				glTexCoord2f(1.0, 0.0);
+				glVertex3f(+vi.x +vj.x -vk.x, +vi.y +vj.y -vk.y, +vi.z +vj.z -vk.z);
+				glTexCoord2f(0.0, 0.0);
+				glVertex3f(-vi.x +vj.x -vk.x, -vi.y +vj.y -vk.y, -vi.z +vj.z -vk.z);
+			}
+			break;
+
+			case VIEW_CUSTOM:
 			{
 				PlayerEntity *player = PLAYER;
 				Vector vi = [player customViewRightVector];		vi.x *= _diameter;	vi.y *= _diameter;	vi.z *= _diameter;

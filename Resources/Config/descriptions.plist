@@ -1023,7 +1023,7 @@
 		"y"
 	);
 	
-	// The four main views
+	// The four main views are now five
 	"forward-view-string"			= "Forward View";
 	"aft-view-string"				= "Aft View";
 	"port-view-string"				= "Port View";
@@ -1188,6 +1188,12 @@
 	"oolite-keydesc-key_view_aft"				= "Aft view";
 	"oolite-keydesc-key_view_port"				= "Port view";
 	"oolite-keydesc-key_view_starboard"			= "Starboard view";
+
+	// This will be useful if we ever decide to show the head track keys in the keyboard settings screen. --Getafix 2014-08-27
+	"oolite-keydesc-key_view_headtrackPitchUp"		= "Pitch Up Head Track view";
+	"oolite-keydesc-key_view_headtrackPitchDown"	= "Pitch Down Head Track view";
+	"oolite-keydesc-key_view_headtrackYawLeft"		= "Yaw Left Head Track view";
+	"oolite-keydesc-key_view_headtrackYawRight"		= "Yaw Right Head Track view";
 
 	"oolite-keydesc-key_gui_screen_status"		= "Status screens";
 	"oolite-keydesc-key_gui_chart_screens"		= "Chart screens";
@@ -1403,6 +1409,7 @@
 	"equipment-aft-weapon-@"		= "Aft %@";
 	"equipment-stb-weapon-@"		= "Starboard %@";
 	"equipment-port-weapon-@"		= "Port %@";
+	"equipment-headtrack-weapon-@"	= "Head Track %@";	// For future use when head track mounted weapons will be implemented. --Getafix 2014-08-27
 	"equipment-pass-berth-@%0"		= "1 Passenger Berth";
 	"equipment-pass-berth-@%1"		= "%d Passenger Berths";
 	"equipment-@-not-available"		= "%@ (N/A)";
@@ -1572,6 +1579,13 @@
 	"stickmapper-view-aft"			= "View aft";
 	"stickmapper-view-port"			= "View port";
 	"stickmapper-view-starboard"	= "View starboard";
+
+	// Just in case we will support stick for head track
+	"stickmapper-view-headtrackPitchUp"		= "Head track view pitch up";
+	"stickmapper-view-headtrackPitchDown"	= "Head track view pitch down";
+	"stickmapper-view-headtrackYawLeft"		= "Head track view yaw left";
+	"stickmapper-view-headtrackYawRight"	= "Head track view yaw right";
+
 	"stickmapper-prime-equipment"	= "Prime equipment";
 	"stickmapper-activate-equipment"	= "Activate equipment";
 	"stickmapper-mode-equipment"	= "Set equipment mode";
@@ -1614,6 +1628,7 @@
 	"aft-facing-string"				= " Aft ";
 	"port-facing-string"			= " Port ";
 	"starboard-facing-string"		= " Starboard ";
+	// "headtrack-facing-string"		= " Head Track ";	// We do not implement support for head track view mounted weapons yet. --Getafix 2014-08-27
 	"@-select-where-to-install"		= "%@\nPlease select where to install this weapon.";
 	"weapon-installed-@"			= "Weapon installed: %@.";
 	"weapon-@-enter-to-replace"		= "Weapon installed: %@.  Press enter to replace it.";
