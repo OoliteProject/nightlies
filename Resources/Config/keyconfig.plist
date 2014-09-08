@@ -11,10 +11,10 @@
 	key_view_port				= "3";
 	key_view_starboard			= "4";
 
-	key_view_headtrackPitchUp	= 282;		// F1
-	key_view_headtrackPitchDown	= 283;		// F2
-	key_view_headtrackYawLeft	= 284;		// F3
-	key_view_headtrackYawRight	= 285;		// F4
+	key_view_headtrackPitchUp	= 241;		// F1
+	key_view_headtrackPitchDown	= 242;		// F2
+	key_view_headtrackYawLeft	= 243;		// F3
+	key_view_headtrackYawRight	= 244;		// F4
 
 	key_gui_screen_status		= "5";
 	key_gui_chart_screens		= "6";
