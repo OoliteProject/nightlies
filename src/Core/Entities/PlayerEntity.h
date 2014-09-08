@@ -582,7 +582,6 @@ typedef enum
 	GLfloat					headtrackRoll;			// current head roll rate
 	GLfloat					headtrack_pitch_delta, headtrack_yaw_delta, headtrack_roll_delta;
 	unsigned				headtrack_pitching: 1, headtrack_yawing: 1, headtrack_rolling: 1;
-	BOOL					headtrack_pitch_flip;
 	
 	
 	// trumbles
