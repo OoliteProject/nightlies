@@ -441,6 +441,7 @@ typedef enum
 	NSMutableDictionary		*multiFunctionDisplayText;
 	NSMutableArray			*multiFunctionDisplaySettings;
 	NSUInteger				activeMFD;
+	NSMutableDictionary		*customDialSettings;
 
 	GLfloat					roll_delta, pitch_delta, yaw_delta;
 	GLfloat					launchRoll;
@@ -620,6 +621,7 @@ typedef enum
 	// position of viewports
 	Vector					forwardViewOffset, aftViewOffset, portViewOffset, starboardViewOffset, headtrackViewOffset;
 	Vector					defaultViewHeadtrackBasisForwardVector;
+
 	Vector					_sysInfoLight;
 	
 	// custom view points
@@ -807,6 +809,12 @@ typedef enum
 - (HeadUpDisplay *) hud;
 - (BOOL) switchHudTo:(NSString *)hudFileName;
 - (void) resetHud;
+
+- (float) dialCustomFloat:(NSString *)dialKey;
+- (NSString *) dialCustomString:(NSString *)dialKey;
+- (OOColor *) dialCustomColor:(NSString *)dialKey;
+- (void) setDialCustom:(id)value forKey:(NSString *)key;
+
 
 - (NSArray *) multiFunctionDisplayList;
 - (NSString *) multiFunctionText:(NSUInteger) index;
@@ -1076,19 +1084,19 @@ typedef enum
 - (Vector) viewpointOffsetStarboard;
 - (Vector) viewpointOffsetHeadtrack;
 
-- (void)setDefaultViewHeadtrackData;
+- (void) setDefaultViewHeadtrackData;
 - (void) resetHeadtrackRoll:(OOViewID)viewDirection;
 - (void) applyHeadtrackRoll:(GLfloat) climb1 andYaw:(GLfloat) yaw1;
 /*
 - (void) applyHeadtrackRoll:(GLfloat) climb1 andRoll:(GLfloat) roll1 andYaw:(GLfloat) yaw1;
 */
 
-- (Quaternion)defaultViewHeadtrackQuaternion;
-- (OOMatrix)defaultViewHeadtrackMatrix;
-- (Vector)defaultViewHeadtrackOffset;
-- (Vector)defaultViewHeadtrackForwardVector;
-- (Vector)defaultViewHeadtrackUpVector;
-- (Vector)defaultViewHeadtrackRightVector;
+- (Quaternion) defaultViewHeadtrackQuaternion;
+- (OOMatrix) defaultViewHeadtrackMatrix;
+- (Vector) defaultViewHeadtrackOffset;
+- (Vector) defaultViewHeadtrackForwardVector;
+- (Vector) defaultViewHeadtrackUpVector;
+- (Vector) defaultViewHeadtrackRightVector;
 
 
 - (void) increase_headtrack_pitch:(double)delta;
