@@ -1023,12 +1023,13 @@
 		"y"
 	);
 	
-	// The four main views are now five
+	// The four main views
 	"forward-view-string"			= "Forward View";
 	"aft-view-string"				= "Aft View";
 	"port-view-string"				= "Port View";
 	"starboard-view-string"			= "Starboard View";
-	"headtrack-view-string"			= "Head Track View";
+	// headtrack is not a fifth view. headtrack coexists with the rest of the main views! --Getafix 2014/09/09
+	// "headtrack-view-string"			= "Head Track View";
 	
 	// GUI strings common to more than one screens
 	"gui-back"						= " Back ";

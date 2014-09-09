@@ -4112,48 +4112,53 @@ static const OOMatrix	starboard_matrix =
 {
 	assert(outMatrix != NULL && outForward != NULL && outUp != NULL);
 	
-	PlayerEntity			*player = nil;
+	PlayerEntity			*player = PLAYER;
 	
-	switch (viewDirection)
+	if (viewDirection == VIEW_CUSTOM)
 	{
-		case VIEW_AFT:
-			*outMatrix = aft_matrix;
-			*outForward = vector_flip(kBasisZVector);
-			*outUp = kBasisYVector;
-			return;
-			
-		case VIEW_PORT:
-			*outMatrix = port_matrix;
-			*outForward = vector_flip(kBasisXVector);
-			*outUp = kBasisYVector;
-			return;
-			
-		case VIEW_STARBOARD:
-			*outMatrix = starboard_matrix;
-			*outForward = kBasisXVector;
-			*outUp = kBasisYVector;
-			return;
-			
-		case VIEW_HEADTRACK:
-			player = PLAYER;
-			*outMatrix = [player defaultViewHeadtrackMatrix];
-			*outForward = [player defaultViewHeadtrackForwardVector];
-			*outUp = [player defaultViewHeadtrackUpVector];
-			return;
-			
-		case VIEW_CUSTOM:
-			player = PLAYER;
-			*outMatrix = [player customViewMatrix];
-			*outForward = [player customViewForwardVector];
-			*outUp = [player customViewUpVector];
-			return;
-			
-		case VIEW_FORWARD:
-		case VIEW_NONE:
-		case VIEW_GUI_DISPLAY:
-		case VIEW_BREAK_PATTERN:
-			;
+		*outMatrix = [player defaultViewHeadtrackMatrix];
+		*outForward = [player defaultViewHeadtrackForwardVector];
+		*outUp = [player defaultViewHeadtrackUpVector];
+		return;
 	}
+	else if ([player headtrackActive])
+	{
+		*outMatrix = [player defaultViewHeadtrackMatrix];
+		*outForward = [player defaultViewHeadtrackForwardVector];
+		*outUp = [player defaultViewHeadtrackUpVector];
+		return;
+	} 
+	else 
+	{
+		switch (viewDirection)
+		{
+			case VIEW_AFT:
+				*outMatrix = aft_matrix;
+				*outForward = vector_flip(kBasisZVector);
+				*outUp = kBasisYVector;
+				return;
+				
+			case VIEW_PORT:
+				*outMatrix = port_matrix;
+				*outForward = vector_flip(kBasisXVector);
+				*outUp = kBasisYVector;
+				return;
+				
+			case VIEW_STARBOARD:
+				*outMatrix = starboard_matrix;
+				*outForward = kBasisXVector;
+				*outUp = kBasisYVector;
+				return;
+				
+			case VIEW_FORWARD:
+			case VIEW_NONE:
+			case VIEW_GUI_DISPLAY:
+			case VIEW_BREAK_PATTERN:
+			case VIEW_CUSTOM:
+				;
+		}
+	}
+	
 	
 	*outMatrix = fwd_matrix;
 	*outForward = kBasisZVector;
@@ -6030,10 +6035,6 @@ OOINLINE BOOL EntityInRange(HPVector p1, Entity *e2, float range)
 			
 		case VIEW_STARBOARD:
 			ms = DESC(@"starboard-view-string");
-			break;
-			
-		case VIEW_HEADTRACK:
-			ms = DESC(@"headtrack-view-string");
 			break;
 			
 		case VIEW_CUSTOM:

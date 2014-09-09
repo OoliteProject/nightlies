@@ -843,7 +843,7 @@ static NSTimeInterval	time_last_frame;
 			}
 			if (headtrackViewKeyMode && ([gameView isDown:key_view_headtrackPitchUp] || [gameView isDown:key_view_headtrackPitchDown] || [gameView isDown:key_view_headtrackYawLeft] || [gameView isDown:key_view_headtrackYawRight]))
 			{
-				view = VIEW_HEADTRACK;
+				headtrackActive = YES;
 			}
 			if (view == VIEW_NONE)
 			{
@@ -3519,7 +3519,7 @@ static NSTimeInterval	time_last_frame;
 	
 	if (headtrackViewKeyMode && ([gameView isDown:key_view_headtrackPitchUp] || [gameView isDown:key_view_headtrackPitchDown] || [gameView isDown:key_view_headtrackYawLeft] || [gameView isDown:key_view_headtrackYawRight]))
 	{
-		
+		headtrackActive = YES;
 		headtrack_yawing = NO;
 		headtrack_pitching = NO;
 		headtrack_rolling = NO;
@@ -3559,7 +3559,7 @@ static NSTimeInterval	time_last_frame;
 		
 		[self applyHeadtrackRoll:headtrackPitch*delta_t andYaw:headtrackYaw*delta_t];
 		[self setDefaultViewHeadtrackData];
-		[self switchToThisView:VIEW_HEADTRACK andProcessWeaponFacing:NO];
+		// [self switchToThisView:VIEW_HEADTRACK andProcessWeaponFacing:NO];
 	}
 }
 

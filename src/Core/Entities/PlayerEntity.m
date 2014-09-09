@@ -2016,6 +2016,7 @@ NSComparisonResult marketSorterByMassUnit(id a, id b, void *market);
 	defaultViewHeadtrackQuaternion = defaultViewHeadtrackIdentityQuaternion;
 	defaultViewHeadtrackBasisForwardVector = kBasisZVector;
 	headtrackReferenceViewDirection = VIEW_FORWARD;
+	headtrackActive = NO;
 
 	
 	[self setDefaultCustomViews];
@@ -2179,7 +2180,7 @@ NSComparisonResult marketSorterByMassUnit(id a, id b, void *market);
 				 [uni_entities[i] isVisible]))
 			{
 				// the player ship can't shadow internal views
-				if (EXPECT(vdir > VIEW_HEADTRACK || ![uni_entities[i] isPlayer]))
+				if (EXPECT(vdir > VIEW_STARBOARD || ![uni_entities[i] isPlayer]))
 				{
 					float shadow = 1.5f;
 					shadowAtPointOcclusionToValue([self viewpointPosition],1.0f,uni_entities[i],sun,&shadow);
@@ -2195,37 +2196,39 @@ NSComparisonResult marketSorterByMassUnit(id a, id b, void *market);
 
 	relativePosition = HPVectorToVector(HPvector_subtract([self viewpointPosition], [sun position]));
 	unitRelativePosition = vector_normal_or_zbasis(relativePosition);
-	switch (vdir)
+	if (headtrackActive)
 	{
-		case VIEW_FORWARD:
-			measuredCos = -dot_product(unitRelativePosition, v_forward);
-			break;
-		case VIEW_AFT:
-			measuredCos = +dot_product(unitRelativePosition, v_forward);
-			break;
-		case VIEW_PORT:
-			measuredCos = +dot_product(unitRelativePosition, v_right);
-			break;
-		case VIEW_STARBOARD:
-			measuredCos = -dot_product(unitRelativePosition, v_right);
-			break;
-		case VIEW_HEADTRACK:
-			{
-				Vector relativeView = [self defaultViewHeadtrackForwardVector];
-				Vector absoluteView = quaternion_rotate_vector(quaternion_conjugate([self orientation]),relativeView);
-				measuredCos = -dot_product(unitRelativePosition, absoluteView);
-			}
-			break;
- 		case VIEW_CUSTOM:
-			{
-				Vector relativeView = [self customViewForwardVector];
-				Vector absoluteView = quaternion_rotate_vector(quaternion_conjugate([self orientation]),relativeView);
-				measuredCos = -dot_product(unitRelativePosition, absoluteView);
-			}
-			break;
-			
-		default:
-			break;
+		Vector relativeView = [self defaultViewHeadtrackForwardVector];
+		Vector absoluteView = quaternion_rotate_vector(quaternion_conjugate([self orientation]),relativeView);
+		measuredCos = -dot_product(unitRelativePosition, absoluteView);
+	}
+	else
+	{
+		switch (vdir)
+		{
+			case VIEW_FORWARD:
+				measuredCos = -dot_product(unitRelativePosition, v_forward);
+				break;
+			case VIEW_AFT:
+				measuredCos = +dot_product(unitRelativePosition, v_forward);
+				break;
+			case VIEW_PORT:
+				measuredCos = +dot_product(unitRelativePosition, v_right);
+				break;
+			case VIEW_STARBOARD:
+				measuredCos = -dot_product(unitRelativePosition, v_right);
+				break;
+			case VIEW_CUSTOM:
+				{
+					Vector relativeView = [self customViewForwardVector];
+					Vector absoluteView = quaternion_rotate_vector(quaternion_conjugate([self orientation]),relativeView);
+					measuredCos = -dot_product(unitRelativePosition, absoluteView);
+				}
+				break;
+				
+			default:
+				break;
+		}
 	}
 	measuredCosAbs = fabs(measuredCos);
 	/*
@@ -3276,6 +3279,12 @@ NSComparisonResult marketSorterByMassUnit(id a, id b, void *market);
 }
 
 
+- (BOOL) headtrackActive
+{
+	return headtrackActive;
+}
+
+
 - (void) updateTrumbles:(OOTimeDelta)delta_t
 {
 	OOTrumble	**trumbles = [self trumbleArray];
@@ -3954,6 +3963,7 @@ NSComparisonResult marketSorterByMassUnit(id a, id b, void *market);
 //		return kZeroVector;	// center view for break pattern
 	// now done by positioning break pattern correctly
 
+
 	switch ([UNIVERSE viewDirection])
 	{
 		case VIEW_FORWARD:
@@ -3964,8 +3974,6 @@ NSComparisonResult marketSorterByMassUnit(id a, id b, void *market);
 			return portViewOffset;
 		case VIEW_STARBOARD:
 			return starboardViewOffset;
-		case VIEW_HEADTRACK:
-			return defaultViewHeadtrackOffset;
 		/* GILES custom viewpoints */
 		case VIEW_CUSTOM:
 			return customViewOffset;
@@ -11445,6 +11453,7 @@ static NSString *last_outfitting_key=nil;
 		}
 		
 		headtrackReferenceViewDirection = viewDirection;
+		headtrackActive = NO;
 }
 
 
