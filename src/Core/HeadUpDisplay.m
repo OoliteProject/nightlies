@@ -3622,7 +3622,13 @@ static void hudRotateViewpointForVirtualDepth(PlayerEntity * player1, Vector p1)
 			view_dir.x = 1.0;   view_dir.y = 0.0;   view_dir.z = 0.0;
 			quaternion_rotate_about_axis(&back_q, v1, -0.5 * M_PI);
 			break;
-			
+/*	
+		case VIEW_HEADTRACK:
+			view_dir = [player1 defaultViewHeadtrackForwardVector];
+			view_up = [player1 defaultViewHeadtrackUpVector];
+			back_q = quaternion_multiply([player1 defaultViewHeadtrackQuaternion], back_q);
+			break;
+*/
 		case VIEW_CUSTOM:
 			view_dir = [player1 customViewForwardVector];
 			view_up = [player1 customViewUpVector];
@@ -3987,6 +3993,7 @@ static GLfloat nonlinearScannerFunc( GLfloat distance, GLfloat zoom, GLfloat sca
 
 static void drawScannerGrid(GLfloat x, GLfloat y, GLfloat z, NSSize siz, int v_dir, GLfloat thickness, GLfloat zoom, BOOL nonlinear)
 {
+	PlayerEntity		*player1 = PLAYER;
 	OOSetOpenGLState(OPENGL_STATE_OVERLAY);
 	
 	GLfloat w1, h1;
@@ -4109,6 +4116,32 @@ static void drawScannerGrid(GLfloat x, GLfloat y, GLfloat z, NSSize siz, int v_d
 				glVertex3f(x, y, z); glVertex3f(x + ww, y + h2, z);
 				glVertex3f(x, y, z); glVertex3f(x + ww, y - h2, z);
 				break;
+			case VIEW_HEADTRACK:
+				switch ([player1 headtrackReferenceViewDirection])
+				{
+					case VIEW_BREAK_PATTERN:
+					case VIEW_GUI_DISPLAY:
+					case VIEW_FORWARD:
+					case VIEW_NONE:
+						glVertex3f(x, y, z); glVertex3f(x - w2, y + hh, z);
+						glVertex3f(x, y, z); glVertex3f(x + w2, y + hh, z);
+						break;
+					
+					case VIEW_AFT:
+						glVertex3f(x, y, z); glVertex3f(x - w2, y - hh, z);
+						glVertex3f(x, y, z); glVertex3f(x + w2, y - hh, z);
+						break;
+						
+					case VIEW_PORT:
+						glVertex3f(x, y, z); glVertex3f(x - ww, y + h2, z);
+						glVertex3f(x, y, z); glVertex3f(x - ww, y - h2, z);
+						break;
+						
+					case VIEW_STARBOARD:
+						glVertex3f(x, y, z); glVertex3f(x + ww, y + h2, z);
+						glVertex3f(x, y, z); glVertex3f(x + ww, y - h2, z);
+						break;
+				}
 		}
 	OOGLEND();
 	

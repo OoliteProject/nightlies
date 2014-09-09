@@ -1723,8 +1723,8 @@ static GLfloat		sBaseMass = 0.0;
 
 	headtrackPitch = 0.0f;
 	headtrackYaw = 0.0f;
-	max_headtrack_pitch = 0.5f;
-	max_headtrack_yaw = 0.5f;
+	max_headtrack_pitch = 1.5;	// 0.5f;
+	max_headtrack_yaw = 1.5;	// 0.5f;
 	headtrack_pitch_delta = 2.0f * max_headtrack_pitch;
 	headtrack_yaw_delta = 2.0f * max_headtrack_yaw;
 	
@@ -2016,6 +2016,8 @@ static GLfloat		sBaseMass = 0.0;
 	defaultViewHeadtrackIdentityQuaternion = kIdentityQuaternion;
 	defaultViewHeadtrackQuaternion = defaultViewHeadtrackIdentityQuaternion;
 	defaultViewHeadtrackBasisForwardVector = kBasisZVector;
+	headtrackReferenceViewDirection = VIEW_FORWARD;
+
 	
 	[self setDefaultCustomViews];
 	
@@ -3208,6 +3210,12 @@ static GLfloat		sBaseMass = 0.0;
 - (GLfloat) maxHeadtrackRoll
 {
 	return max_headtrack_roll;
+}
+
+
+- (OOViewID) headtrackReferenceViewDirection
+{
+	return headtrackReferenceViewDirection;
 }
 
 
@@ -11038,6 +11046,8 @@ static NSString *last_outfitting_key=nil;
 			default:
 				break;
 		}
+		
+		headtrackReferenceViewDirection = viewDirection;
 }
 
 

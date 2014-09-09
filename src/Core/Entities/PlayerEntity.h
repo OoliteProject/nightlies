@@ -582,6 +582,7 @@ typedef enum
 	GLfloat					headtrackRoll;			// current head roll rate
 	GLfloat					headtrack_pitch_delta, headtrack_yaw_delta, headtrack_roll_delta;
 	unsigned				headtrack_pitching: 1, headtrack_yawing: 1, headtrack_rolling: 1;
+	OOViewID				headtrackReferenceViewDirection;
 	
 	
 	// trumbles
@@ -1031,6 +1032,7 @@ typedef enum
 - (Vector) defaultViewHeadtrackForwardVector;
 - (Vector) defaultViewHeadtrackUpVector;
 - (Vector) defaultViewHeadtrackRightVector;
+- (OOViewID) headtrackReferenceViewDirection;
 
 
 - (void) increase_headtrack_pitch:(double)delta;
