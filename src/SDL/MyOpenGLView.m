@@ -2026,6 +2026,8 @@ keys[a] = NO; keys[b] = NO; \
 
 	_gamma = value;
 	SDL_SetGamma(_gamma, _gamma, _gamma);
+	
+	[[NSUserDefaults standardUserDefaults] setFloat:_gamma forKey:@"gamma-value"];
 }
 
 
