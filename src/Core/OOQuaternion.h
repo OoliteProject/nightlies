@@ -79,6 +79,9 @@ HPVector HPvector_forward_from_quaternion(Quaternion quat) CONST_FUNC;
 
 void basis_vectors_from_quaternion(Quaternion quat, Vector *outRight, Vector *outUp, Vector *outForward);
 
+/* Quaternion nlerp */
+Quaternion quaternion_nlerp(Quaternion q1, Quaternion q2, OOScalar t) CONST_FUNC;
+
 /* produce a quaternion representing an angle between two vectors. Assumes the vectors are normalized. */
 Quaternion quaternion_rotation_between(Vector v0, Vector v1) CONST_FUNC;
 
