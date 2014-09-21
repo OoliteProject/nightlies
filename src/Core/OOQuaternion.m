@@ -192,6 +192,36 @@ void basis_vectors_from_quaternion(Quaternion quat, Vector *outRight, Vector *ou
 }
 
 
+// This function has a singularity when the difference between the initial and final quaternions is a 180 degree rotation.
+// This is due to the fact that the axis of rotation for the blend becomes ambiguous.
+// Source: http://physicsforgames.blogspot.gr/2010/02/quaternions.html
+Quaternion quaternion_nlerp(Quaternion q1, Quaternion q2, OOScalar t)
+{
+     Quaternion	result;
+     OOScalar 	dot = quaternion_dot_product(q1, q2);
+     OOScalar 	ti = 1.0f - t;
+	 
+     if(dot < 0.0f)
+     {
+          Quaternion q2neg = quaternion_negate(q2);
+          result.w = ti*q1.w + t*q2neg.w;
+          result.x = ti*q1.x + t*q2neg.x;
+          result.y = ti*q1.y + t*q2neg.y;
+          result.z = ti*q1.z + t*q2neg.z;
+     }
+     else
+     {
+          result.w = ti*q1.w + t*q2.w;
+          result.x = ti*q1.x + t*q2.x;
+          result.y = ti*q1.y + t*q2.y;
+          result.z = ti*q1.z + t*q2.z;
+     }
+     quaternion_normalize(&result);
+	 
+     return result;
+}
+
+
 Quaternion quaternion_rotation_between(Vector v0, Vector v1)
 {
 	Quaternion q;
