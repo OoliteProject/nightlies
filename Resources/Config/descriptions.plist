@@ -1558,6 +1558,11 @@
 	"stickmapper-roll"				= "Roll";
 	"stickmapper-pitch"				= "Pitch";
 	"stickmapper-yaw"				= "Yaw";
+	"stickmapper-headtrack-roll"	= "Headtrack Roll";
+	"stickmapper-headtrack-pitch"	= "Headtrack Pitch";
+	"stickmapper-headtrack-yaw"		= "Headtrack Yaw";
+	"stickmapper-pitch"				= "Pitch";
+	"stickmapper-yaw"				= "Yaw";
 	"stickmapper-profile"				= "Edit Axis Profiles";
 	"stickmapper-increase-thrust"	= "Increase thrust";
 	"stickmapper-decrease-thrust"	= "Decrease thrust";

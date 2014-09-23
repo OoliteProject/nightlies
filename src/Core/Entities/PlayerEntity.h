@@ -1087,6 +1087,7 @@ typedef enum
 
 - (void) setDefaultViewHeadtrackData;
 - (void) resetHeadtrackRoll:(OOViewID)viewDirection;
+- (void) applyHeadtrackRoll:(GLfloat) roll1 andPitch:(GLfloat) pitch1 andYaw:(GLfloat) yaw1;
 - (void) applyHeadtrackRoll:(GLfloat) climb1 andYaw:(GLfloat) yaw1;
 /*
 - (void) applyHeadtrackRoll:(GLfloat) climb1 andRoll:(GLfloat) roll1 andYaw:(GLfloat) yaw1;
@@ -1108,6 +1109,9 @@ typedef enum
 - (void) decrease_headtrack_yaw:(double)delta;
 - (void) increase_headtrack_roll:(double)delta;
 - (void) decrease_headtrack_roll:(double)delta;
+- (void) change_headtrack_roll:(double)delta;
+- (void) change_headtrack_pitch:(double)delta;
+- (void) change_headtrack_yaw:(double)delta;
 - (GLfloat) headtrackPitch;
 - (GLfloat) headtrackYaw;
 - (GLfloat) headtrackRoll;

@@ -603,6 +603,10 @@ static id sSharedStickHandler = nil;
 		case AXIS_VIEWY:
 			axstate[function] = axisvalue / STICK_NORMALDIV;
 			break;
+		case AXIS_HEADTRACK_ROLL:
+		case AXIS_HEADTRACK_PITCH:
+		case AXIS_HEADTRACK_YAW:
+			axstate[function] = axisvalue;         
 		default:
 			// set the state with no modification.
 			axstate[function] = axisvalue / 32768;         

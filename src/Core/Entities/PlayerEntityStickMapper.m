@@ -588,6 +588,21 @@ MA 02110-1301, USA.
 				  allowable:HW_AXIS|HW_BUTTON
 					 axisfn:AXIS_VIEWX
 					  butfn:BUTTON_VIEWSTARBOARD]];
+	[funcList addObject: 
+	 [self makeStickGuiDict:DESC(@"stickmapper-headtrack-roll")
+				  allowable:HW_AXIS
+					 axisfn:AXIS_HEADTRACK_ROLL
+					  butfn:STICK_NOFUNCTION]];
+	[funcList addObject: 
+	 [self makeStickGuiDict:DESC(@"stickmapper-headtrack-pitch")
+				  allowable:HW_AXIS
+					 axisfn:AXIS_HEADTRACK_PITCH
+					  butfn:STICK_NOFUNCTION]];
+	[funcList addObject:
+	 [self makeStickGuiDict:DESC(@"stickmapper-headtrack-yaw")
+				  allowable:HW_AXIS
+					 axisfn:AXIS_HEADTRACK_YAW
+					  butfn:STICK_NOFUNCTION]];
 	return funcList;
 }
 
