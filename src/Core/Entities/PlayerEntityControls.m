@@ -3324,14 +3324,71 @@ static NSTimeInterval	time_last_frame;
 - (void) pollHeadtrackArrowKeyControls:(double)delta_t
 {
 	MyOpenGLView		*gameView = [UNIVERSE gameView];
+	OOJoystickManager	*stickHandler = [OOJoystickManager sharedStickHandler];
+	NSUInteger			numSticks = [stickHandler joystickCount];
+	double				reqRoll=0.0, reqPitch=0.0, reqYaw=0.0;
 	BOOL 				headtrackViewKeyMode = [gameView isShiftDown];
+	BOOL				keyboardHeadtrackOverride = YES;
 	
+	headtrackActive = YES;
+	headtrack_yawing = NO;
+	headtrack_pitching = NO;
+	headtrack_rolling = NO;
+	
+	if (numSticks > 0)
+	{
+		reqRoll = [stickHandler getAxisState: AXIS_HEADTRACK_ROLL];
+		if (reqRoll == STICK_AXISUNASSIGNED)
+		{
+			reqRoll = 0;
+		} 
+		else
+		{
+			[self change_headtrack_roll:reqRoll];
+			headtrack_rolling = YES;
+			keyboardHeadtrackOverride = NO;
+			OOLog(kOOLogParameterError, @"reqRoll: %.5f\t", reqRoll);	
+		}
+
+		reqPitch = [stickHandler getAxisState: AXIS_HEADTRACK_PITCH];
+		if (reqPitch == STICK_AXISUNASSIGNED)
+		{
+			reqPitch = 0;
+		} 
+		else 
+		{
+			[self change_headtrack_pitch:reqPitch];
+			headtrack_pitching = YES;
+			keyboardHeadtrackOverride = NO;
+			OOLog(kOOLogParameterError, @"reqPitch: %.5f\t", reqPitch);	
+		}
+
+		reqYaw = [stickHandler getAxisState: AXIS_HEADTRACK_YAW];
+		if (reqYaw == STICK_AXISUNASSIGNED)
+		{
+			reqYaw = 0;
+		} 
+		else 
+		{
+			[self change_headtrack_yaw:reqYaw];
+			headtrack_yawing = YES;
+			keyboardHeadtrackOverride = NO;
+			OOLog(kOOLogParameterError, @"reqYaw: %.5f\t", reqYaw);	
+		}
+		
+		[self applyHeadtrackRoll:headtrackRoll andPitch:headtrackPitch andYaw:headtrackYaw];
+		[self setDefaultViewHeadtrackData];
+	}
+
+	
+	if (keyboardHeadtrackOverride)
+	{
 	if (headtrackViewKeyMode && ([gameView isDown:key_view_headtrackPitchUp] || [gameView isDown:key_view_headtrackPitchDown] || [gameView isDown:key_view_headtrackYawLeft] || [gameView isDown:key_view_headtrackYawRight]))
 	{
-		headtrackActive = YES;
-		headtrack_yawing = NO;
-		headtrack_pitching = NO;
-		headtrack_rolling = NO;
+		// headtrackActive = YES;
+		// headtrack_yawing = NO;
+		// headtrack_pitching = NO;
+		// headtrack_rolling = NO;
 		if ([gameView isDown:key_view_headtrackYawLeft] && [gameView isDown:key_view_headtrackYawRight])
 		{
 			headtrackYaw = 0.0;
@@ -3365,9 +3422,10 @@ static NSTimeInterval	time_last_frame;
 			[self decrease_headtrack_pitch:delta_t*pitch_delta];
 			headtrack_pitching = YES;
 		}
-		
 		[self applyHeadtrackRoll:headtrackPitch*delta_t andYaw:headtrackYaw*delta_t];
 		[self setDefaultViewHeadtrackData];
+		}
+		
 		// [self switchToThisView:VIEW_HEADTRACK andProcessWeaponFacing:NO];
 	}
 }

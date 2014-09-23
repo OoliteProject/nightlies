@@ -1723,8 +1723,10 @@ static GLfloat		sBaseMass = 0.0;
 
 	headtrackPitch = 0.0f;
 	headtrackYaw = 0.0f;
+	headtrackRoll = 0.0f;
 	max_headtrack_pitch = 1.5;	// 0.5f;
 	max_headtrack_yaw = 1.5;	// 0.5f;
+	max_headtrack_roll = 1.5;	// 0.5f;
 	headtrack_pitch_delta = 2.0f * max_headtrack_pitch;
 	headtrack_yaw_delta = 2.0f * max_headtrack_yaw;
 	
@@ -3109,6 +3111,7 @@ static GLfloat		sBaseMass = 0.0;
 	if (headtrackPitch < -max_headtrack_pitch)
 		headtrackPitch = -max_headtrack_pitch;
 */
+	OOLog(kOOLogParameterError, @"Pitching Up - headtrack_pitch_total: %.5f", headtrackPitch);	
 }
 
 
@@ -3177,6 +3180,69 @@ static GLfloat		sBaseMass = 0.0;
 	}
 	OOLog(kOOLogParameterError, @"Rolling Left - headtrack_roll_total: %.5f", headtrack_roll_total);	
 */
+}
+
+
+// Head Track Roll
+- (void) change_headtrack_roll:(double) delta
+{
+	headtrackRoll = delta;
+/*
+	if (headtrack_roll_total > -headtrack_roll_max)
+	{
+		headtrack_roll_total -= delta;
+		headtrackRoll = -delta;
+	} 
+	else 
+	{
+		headtrack_roll_total = -headtrack_roll_max;
+		headtrackRoll = 0.0f;
+		headtrack_rolling = NO;
+	}
+*/
+	OOLog(kOOLogParameterError, @"Rolling - headtrack_roll_total: %.5f", headtrackRoll);	
+}
+
+
+// Head Track Pitch
+- (void) change_headtrack_pitch:(double) delta
+{
+	headtrackPitch = delta;
+/*
+	if (headtrack_roll_total > -headtrack_roll_max)
+	{
+		headtrack_roll_total -= delta;
+		headtrackRoll = -delta;
+	} 
+	else 
+	{
+		headtrack_roll_total = -headtrack_roll_max;
+		headtrackRoll = 0.0f;
+		headtrack_rolling = NO;
+	}
+*/
+	OOLog(kOOLogParameterError, @"Pitching - headtrack_pitch_total: %.5f", headtrackPitch);	
+}
+
+
+// Head Track Yaw
+- (void) change_headtrack_yaw:(double) delta
+{
+	headtrackYaw = delta;
+/*
+	if (headtrack_roll_total > -headtrack_roll_max)
+	{
+		headtrack_roll_total -= delta;
+		headtrackRoll = -delta;
+	} 
+	else 
+	{
+		headtrack_roll_total = -headtrack_roll_max;
+		headtrackRoll = 0.0f;
+		headtrack_rolling = NO;
+	}
+*/
+	OOLog(kOOLogParameterError, @"Yawing - headtrack_yaw_total: %.5f", headtrackYaw);	
 }
 
 
@@ -11086,6 +11152,21 @@ static NSString *last_outfitting_key=nil;
 		defaultViewHeadtrackQuaternion = defaultViewHeadtrackQuaternionPrev;
 
 	OOLog(kOOLogParameterError, @"Climb: %.5f\tYaw: %.5f\tForward Vector (%.5f, %.5f, %.5f)\tRight Vector (%.5f, %.5f, %.5f)\tUp Vector (%.5f, %.5f, %.5f)\tBasisForward Vector (%.5f, %.5f, %.5f)\t", -climb1, yaw1, defaultViewHeadtrackForwardVector.x, defaultViewHeadtrackForwardVector.y, defaultViewHeadtrackForwardVector.z, defaultViewHeadtrackRightVector.x, defaultViewHeadtrackRightVector.y, defaultViewHeadtrackRightVector.z, defaultViewHeadtrackUpVector.x, defaultViewHeadtrackUpVector.y, defaultViewHeadtrackUpVector.z, defaultViewHeadtrackBasisForwardVector.x, defaultViewHeadtrackBasisForwardVector.y, defaultViewHeadtrackBasisForwardVector.z);	
+}
+
+
+- (void) applyHeadtrackRoll:(GLfloat) roll1 andPitch:(GLfloat) pitch1 andYaw:(GLfloat) yaw1
+{
+	Quaternion q1 = kIdentityQuaternion;
+
+	if (roll1 && headtrack_rolling)
+		quaternion_rotate_about_z(&q1, -roll1);
+	if (pitch1 && headtrack_pitching)
+		quaternion_rotate_about_x(&q1, pitch1);
+	if (yaw1 && headtrack_yawing)
+		quaternion_rotate_about_y(&q1, yaw1);
+
+	defaultViewHeadtrackQuaternion = quaternion_multiply(q1, kIdentityQuaternion);
 }
 
 
