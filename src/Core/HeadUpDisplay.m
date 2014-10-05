@@ -103,7 +103,7 @@ static void GLDrawNonlinearCascadeWeapon( GLfloat x, GLfloat y, GLfloat z, NSSiz
 
 static OOTexture			*sFontTexture = nil;
 static OOEncodingConverter	*sEncodingCoverter = nil;
-
+static NSMutableDictionary	*sDrawCache = nil;
 
 enum
 {
@@ -197,6 +197,7 @@ static BOOL		_compassUpdated;
 
 
 static GLfloat drawCharacterQuad(uint8_t chr, GLfloat x, GLfloat y, GLfloat z, NSSize siz);
+static GLfloat prepareCharacterQuad(uint8_t chr, GLfloat x, GLfloat y, GLfloat z, NSSize siz, GLfloat *texArray, GLfloat *vertArray);
 
 static void InitTextEngine(void);
 
@@ -3686,6 +3687,8 @@ static void InitTextEngine(void)
 	{
 		sGlyphWidths[i] = [widths oo_floatAtIndex:i] * GLYPH_SCALE_FACTOR;
 	}
+
+	sDrawCache = [[NSMutableDictionary alloc] init];
 }
 
 
@@ -3693,11 +3696,16 @@ void OOHUDResetTextEngine(void)
 {
 	DESTROY(sFontTexture);
 	DESTROY(sEncodingCoverter);
+	DESTROY(sDrawCache);
 }
 
 
 static GLfloat drawCharacterQuad(uint8_t chr, GLfloat x, GLfloat y, GLfloat z, NSSize siz)
 {
+	if (chr == 31 || chr == 32) // must be fully-transparent (hair space, space)
+	{
+		return siz.width * sGlyphWidths[chr];
+	}
 	GLfloat texture_x = ONE_SIXTEENTH * (chr & 0x0f);
 	GLfloat texture_y = ONE_SIXTEENTH * (chr >> 4);
 	if (chr > 32)  y += ONE_EIGHTH * siz.height;	// Adjust for baseline offset change in 1.71 (needed to keep accented characters in box)
@@ -3711,6 +3719,28 @@ static GLfloat drawCharacterQuad(uint8_t chr, GLfloat x, GLfloat y, GLfloat z, N
 	glTexCoord2f(texture_x, texture_y);
 	glVertex3f(x, y + siz.height, z);
 	
+	return siz.width * sGlyphWidths[chr];
+}
+
+
+static GLfloat prepareCharacterQuad(uint8_t chr, GLfloat x, GLfloat y, GLfloat z, NSSize siz, GLfloat *texArray, GLfloat *vertArray)
+{
+	GLfloat texture_x = ONE_SIXTEENTH * (chr & 0x0f);
+	GLfloat texture_y = ONE_SIXTEENTH * (chr >> 4);
+	if (chr > 32)  y += ONE_EIGHTH * siz.height;	// Adjust for baseline offset change in 1.71 (needed to keep accented characters in box)
+
+	*texArray++ = texture_x; *texArray++ = texture_y + ONE_SIXTEENTH;
+	*vertArray++ = x; *vertArray++ = y;	*vertArray++ = z;
+
+	*texArray++ = texture_x + ONE_SIXTEENTH; *texArray++ = texture_y + ONE_SIXTEENTH;
+	*vertArray++ = x + siz.width; *vertArray++ = y;	*vertArray++ = z;
+
+	*texArray++ = texture_x + ONE_SIXTEENTH; *texArray++ = texture_y;
+	*vertArray++ = x + siz.width; *vertArray++ = y + siz.height;	*vertArray++ = z;
+
+	*texArray++ = texture_x; *texArray++ = texture_y;
+	*vertArray++ = x; *vertArray++ = y + siz.height;	*vertArray++ = z;
+
 	return siz.width * sGlyphWidths[chr];
 }
 
@@ -3790,22 +3820,66 @@ void OODrawStringAligned(NSString *text, GLfloat x, GLfloat y, GLfloat z, NSSize
 	OOGL(glEnable(GL_TEXTURE_2D));
 	[sFontTexture apply];
 	
-	data = [sEncodingCoverter convertString:text];
-	length = [data length];
-	bytes = [data bytes];
+	OOGL(glEnableClientState(GL_TEXTURE_COORD_ARRAY));
+	OOGL(glEnableClientState(GL_VERTEX_ARRAY));
 
-	if (EXPECT_NOT(rightAlign))
+	NSString *cacheKey = [NSString stringWithFormat:@"%.0f-%.0f-%.0f-%.0f-%d-%@",x,y,siz.width,siz.height,rightAlign,text];
+	NSArray *cached = [sDrawCache oo_arrayForKey:cacheKey defaultValue:nil];
+
+	if (cached == nil)
 	{
-		cx -= OORectFromString(text, 0.0f, 0.0f, siz).size.width;
-	}
+		data = [sEncodingCoverter convertString:text];
+		length = [data length];
+		bytes = [data bytes];
+
+		if (EXPECT_NOT(rightAlign))
+		{
+			cx -= OORectFromString(text, 0.0f, 0.0f, siz).size.width;
+		}
 	
-	OOGLBEGIN(GL_QUADS);
-	for (i = 0; i < length; i++)
+		GLfloat *vertexes = malloc(sizeof(GLfloat)*3*4*length);
+		GLfloat *texCoords = malloc(sizeof(GLfloat)*2*4*length);
+		GLuint *quads = malloc(sizeof(GLuint)*4*length);
+		GLuint *quadPtr = quads;
+		for (i = 0; i < length; i++)
+		{
+			cx += prepareCharacterQuad(bytes[i], cx, y, z, siz, texCoords+(8*i), vertexes+(12*i));
+			*quadPtr++ = (i*4);
+			*quadPtr++ = (i*4)+1;
+			*quadPtr++ = (i*4)+2;
+			*quadPtr++ = (i*4)+3;
+		}
+	
+		OOGL(glVertexPointer(3, GL_FLOAT, 0, vertexes));
+		OOGL(glTexCoordPointer(2, GL_FLOAT, 0, texCoords));
+
+		OOGL(glDrawElements(GL_QUADS, 4*length, GL_UNSIGNED_INT, quads));
+
+		NSArray *toCache = [NSArray arrayWithObjects:[NSData dataWithBytesNoCopy:vertexes length:sizeof(GLfloat)*3*4*length freeWhenDone:YES],
+									[NSData dataWithBytesNoCopy:texCoords length:sizeof(GLfloat)*2*4*length freeWhenDone:YES],
+									[NSData dataWithBytesNoCopy:quads length:sizeof(GLuint)*4*length freeWhenDone:YES],
+							 [NSNumber numberWithInt:length],
+									nil];
+		[sDrawCache setObject:toCache forKey:cacheKey];
+	}
+	else
 	{
-		cx += drawCharacterQuad(bytes[i], cx, y, z, siz);
+		OOLog(@"cache.debug",@"Cache hit: %@",cacheKey);
+		const GLfloat *vertexes = [(NSData*)[cached objectAtIndex:0] bytes];
+		const GLfloat *texCoords = [(NSData*)[cached objectAtIndex:1] bytes];
+		const GLfloat *quads = [(NSData*)[cached objectAtIndex:2] bytes];
+		length = [cached oo_intAtIndex:3];
+
+		OOGL(glVertexPointer(3, GL_FLOAT, 0, vertexes));
+		OOGL(glTexCoordPointer(2, GL_FLOAT, 0, texCoords));
+
+		OOGL(glDrawElements(GL_QUADS, 4*length, GL_UNSIGNED_INT, quads));
 	}
-	OOGLEND();
-	
+
+
+	OOGL(glDisableClientState(GL_TEXTURE_COORD_ARRAY));
+	OOGL(glDisableClientState(GL_VERTEX_ARRAY));
+
 	[OOTexture applyNone];
 	OOGL(glDisable(GL_TEXTURE_2D));
 	
