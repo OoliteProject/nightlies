@@ -114,7 +114,9 @@ enum
 #define MAX_NUMBER_OF_ENTITIES				200
 #define STANDARD_STATION_ROLL				0.4
 // currently twice scanner radius
-#define LANE_WIDTH			51200.0
+//#define LANE_WIDTH			51200.0
+//RSRESCALE
+#define LANE_WIDTH			102400.0
 
 static NSString * const kOOLogUniversePopulateError			= @"universe.populate.error";
 static NSString * const kOOLogUniversePopulateWitchspace	= @"universe.populate.witchspace";
@@ -890,7 +892,9 @@ static GLfloat	docked_light_specular[4]	= { DOCKED_ILLUM_LEVEL, DOCKED_ILLUM_LEV
 	OOPlanetEntity *a_planet = [[OOPlanetEntity alloc] initFromDictionary:planetDict withAtmosphere:YES andSeed:systemSeed];
 	
 	double planet_radius = [a_planet radius];
-	double planet_zpos = (12.0 + (Ranrot() & 3) - (Ranrot() & 3) ) * planet_radius; // 9..15 pr (planet radii) ahead
+	//double planet_zpos = (12.0 + (Ranrot() & 3) - (Ranrot() & 3) ) * planet_radius; // 9..15 pr (planet radii) ahead
+	//RSRESCALE
+	double planet_zpos = (24.0 + (Ranrot() & 3) - (Ranrot() & 3) ) * planet_radius; // 9..15 pr (planet radii) ahead
 	
 	[a_planet setPosition:(HPVector){ 0, 0, planet_zpos }];
 	[a_planet setEnergy:1000000.0];
@@ -1118,7 +1122,9 @@ static GLfloat	docked_light_specular[4]	= { DOCKED_ILLUM_LEVEL, DOCKED_ILLUM_LEV
 	}
 	while (vf.z <= 0.0);						// keep station on the correct side of the planet
 	
-	stationPos = HPvector_subtract(stationPos, vectorToHPVector(vector_multiply_scalar(vf, 2.0 * planet_radius)));
+	//stationPos = HPvector_subtract(stationPos, vectorToHPVector(vector_multiply_scalar(vf, 2.0 * planet_radius)));
+	//RSRESCALE
+	stationPos = HPvector_subtract(stationPos, vectorToHPVector(vector_multiply_scalar(vf, 1.5 * planet_radius)));
 	
 	defaultStationDesc = @"coriolis";
 	if (techlevel > 10)

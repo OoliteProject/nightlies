@@ -116,7 +116,9 @@ this.systemWillPopulate = function()
 						{
 							priority: 5,
 							location: "COORDINATES",
-							coordinates: system.mainStation.position.add(system.mainStation.vectorForward.multiply(10E3)),
+							//coordinates: system.mainStation.position.add(system.mainStation.vectorForward.multiply(10E3)),
+							//RSRESCALE
+							coordinates: system.mainStation.position.add(system.mainStation.vectorForward.multiply(5E3)),
 							callback: function(pos) {
 								var nb = system.addShips("buoy",1,pos,0)[0];
 								nb.scanClass = "CLASS_BUOY";
@@ -1472,12 +1474,16 @@ this._addCourier = function(pos)
 	}
 	t[0].bounty = 0;
 	t[0].heatInsulation = 6;
+	//RSRESCALE
+	//t[0].heatInsulation = 20;	//most likely not necessary
 	if (t.escortGroup)
 	{
 		var gs = t.escortGroup.ships;
 		for (var i=gs.length=1; i>=0; i++)
 		{
 			gs[i].heatInsulation = 6;
+			//RSRESCALE
+			//gs[i].heatInsulation = 20; //most likely not necessary
 			gs[i].bounty = 0;
 		}
 	}

@@ -415,7 +415,9 @@ static ShipEntity *doOctreesCollide(ShipEntity *prime, ShipEntity *other);
 		}
 		if (isWeaponNone(weapon_type) && hasTurrets)
 		{ // safety for ships only equipped with turrets
-			weaponRange = 10000.0;
+			//weaponRange = 10000.0;
+			//RSRESCALE
+			weaponRange = 3300.0;
 		}
 		else
 		{
@@ -4401,7 +4403,9 @@ ShipEntity* doOctreesCollide(ShipEntity* prime, ShipEntity* other)
 				jink = kZeroVector; // almost all behaviours
 
 				// TODO: good pilots use behaviour_attack_sniper sometimes
-				if (getWeaponRangeFromType(forward_weapon_real_type) > 12500 && range > 12500)
+				//if (getWeaponRangeFromType(forward_weapon_real_type) > 12500 && range > 12500)
+				//RSRESCALE
+				if (getWeaponRangeFromType(forward_weapon_real_type) > 4125 && range > 4125)
 				{
 					behaviour = BEHAVIOUR_ATTACK_SNIPER;
 				}
@@ -4731,7 +4735,9 @@ ShipEntity* doOctreesCollide(ShipEntity* prime, ShipEntity* other)
 		[self noteLostTargetAndGoIdle];
 		return;
 	}
-	else if (range < 15000)
+	//else if (range < 15000)
+	//RSRESCALE
+	else if (range < 4950)
 	{
 		behaviour = BEHAVIOUR_ATTACK_TARGET;
 	}
@@ -4950,7 +4956,9 @@ ShipEntity* doOctreesCollide(ShipEntity* prime, ShipEntity* other)
 	 * laser shots to destroy an asteroid, but some of these mining
 	 * ships are way too slow to effectively chase down the debris:
 	 * wait until reasonably close before trying to split it. */
-	if (range < 3000)
+	//if (range < 3000)
+	//RSRESCALE
+	if (range < 1500)
 	{
 		[self fireMainWeapon:range];
 	}
@@ -10819,7 +10827,9 @@ Vector positionOffsetForShipInRotationToAlignment(ShipEntity* ship, Quaternion q
 		}
 		if (isWeaponNone(weapon_type) && hasTurrets)
 		{ // no forward weapon but has turrets, so set up range calculations accordingly
-			weaponRange = 10000.0;
+			//weaponRange = 10000.0;
+			//RSRESCALE
+			weaponRange = 3300.0;
 		}
 		else
 		{
@@ -13163,7 +13173,9 @@ Vector positionOffsetForShipInRotationToAlignment(ShipEntity* ship, Quaternion q
 			my_entities[station_count++] = [uni_entities[i] retain];		//	retained
 	//
 	StationEntity *thing = nil, *station = nil;
-	double range2, nearest2 = SCANNER_MAX_RANGE2 * 1000000.0; // 1000x typical scanner range (25600 km), squared.
+	//double range2, nearest2 = SCANNER_MAX_RANGE2 * 1000000.0; // 1000x typical scanner range (25600 km), squared.
+	//RSRESCALE
+	double range2, nearest2 = SCANNER_MAX_RANGE2 * 10000000.0; // 1000x typical scanner range (25600 km), squared.
 	for (i = 0; i < station_count; i++)
 	{
 		thing = (StationEntity *)my_entities[i];
