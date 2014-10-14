@@ -2669,7 +2669,7 @@ NSComparisonResult marketSorterByMassUnit(id a, id b, void *market);
 				// decrease speed to maximum normal speed
 				//float deceleration = (speed_delta * delta_t * HYPERSPEED_FACTOR);
 				//RSRESCALE
-				float deceleration = (speed_delta * delta_t * HYPERSPEED_FACTOR * 2);
+				float deceleration = (speed_delta * delta_t * HYPERSPEED_FACTOR * 8);
 				if (alertFlags & ALERT_FLAG_MASS_LOCK)
 				{
 					// decelerate much quicker in masslocks
