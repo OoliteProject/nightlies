@@ -18,6 +18,8 @@ Changes between Oolite 1.80 and Oolite 1.80.1:
 * Windows port: Fixed unnecessary double OpenGL initializations under
   certain resize window conditions.
 * Fix return type of EquipmentInfo.requiredCargoSpace
+* Fix sun glare so that it is handled properly also when the game window is
+  too tall or too wide.
 
 -------------------------------------------------------------------------------
 
