@@ -3517,58 +3517,72 @@ static NSTimeInterval	time_last_frame;
 	MyOpenGLView		*gameView = [UNIVERSE gameView];
 	OOJoystickManager	*stickHandler = [OOJoystickManager sharedStickHandler];
 	NSUInteger			numSticks = [stickHandler joystickCount];
-	double				reqRoll=0.0, reqPitch=0.0, reqYaw=0.0;
+	double				reqRollNew=0.0, reqPitchNew=0.0, reqYawNew=0.0;
 	BOOL 				headtrackViewKeyMode = [gameView isShiftDown];
 	BOOL				keyboardHeadtrackOverride = YES;
 	
-	headtrackActive = YES;
-	headtrack_yawing = NO;
-	headtrack_pitching = NO;
-	headtrack_rolling = NO;
-	
+
 	if (numSticks > 0)
 	{
-		reqRoll = [stickHandler getAxisState: AXIS_HEADTRACK_ROLL];
-		if (reqRoll == STICK_AXISUNASSIGNED)
+		reqRollNew = 2 * [stickHandler getAxisState: AXIS_HEADTRACK_ROLL];
+		headtrackRoll += (reqRollNew-headtrackRoll) * delta_t * 10;
+		if (headtrackRoll == STICK_AXISUNASSIGNED)
 		{
-			reqRoll = 0;
+			headtrackRoll = 0;
+			headtrack_rolling = NO;
+			keyboardHeadtrackOverride = YES;
 		} 
 		else
 		{
-			[self change_headtrack_roll:reqRoll];
+			if (fabs(reqRollNew-headtrackRoll) < 0.0005) headtrackRoll = reqRollNew;
+			[self change_headtrack_roll:headtrackRoll];
 			headtrack_rolling = YES;
+			headtrackActive = YES;
 			keyboardHeadtrackOverride = NO;
-			OOLog(kOOLogParameterError, @"reqRoll: %.5f\t", reqRoll);	
+			// OOLog(kOOLogParameterError, @"reqRoll: %.5f\t", headtrackRoll);	
 		}
 
-		reqPitch = [stickHandler getAxisState: AXIS_HEADTRACK_PITCH];
-		if (reqPitch == STICK_AXISUNASSIGNED)
+		reqPitchNew = 2 * [stickHandler getAxisState: AXIS_HEADTRACK_PITCH];
+		headtrackPitch += (reqPitchNew-headtrackPitch) * delta_t * 10;
+		if (headtrackPitch == STICK_AXISUNASSIGNED)
 		{
-			reqPitch = 0;
-		} 
-		else 
+			headtrackPitch = 0;
+			headtrack_pitching = NO;
+			keyboardHeadtrackOverride = YES;
+		}
+		else
 		{
-			[self change_headtrack_pitch:reqPitch];
+			if (fabs(reqPitchNew-headtrackPitch) < 0.0005) headtrackPitch = reqPitchNew;
+			[self change_headtrack_pitch:headtrackPitch];
 			headtrack_pitching = YES;
+			headtrackActive = YES;
 			keyboardHeadtrackOverride = NO;
-			OOLog(kOOLogParameterError, @"reqPitch: %.5f\t", reqPitch);	
+			// OOLog(kOOLogParameterError, @"reqPitch: %.8f\t", headtrackPitch);	
 		}
 
-		reqYaw = [stickHandler getAxisState: AXIS_HEADTRACK_YAW];
-		if (reqYaw == STICK_AXISUNASSIGNED)
+		reqYawNew = 3 * [stickHandler getAxisState: AXIS_HEADTRACK_YAW];
+		headtrackYaw += (reqYawNew-headtrackYaw) * delta_t * 10;
+		if (headtrackYaw == STICK_AXISUNASSIGNED)
 		{
-			reqYaw = 0;
+			headtrackYaw = 0;
+			headtrack_yawing = NO;
+			keyboardHeadtrackOverride = YES;
 		} 
 		else 
 		{
-			[self change_headtrack_yaw:reqYaw];
+			if (fabs(reqYawNew-headtrackYaw) < 0.0005) headtrackYaw = reqYawNew;
+			[self change_headtrack_yaw:headtrackYaw];
 			headtrack_yawing = YES;
+			headtrackActive = YES;
 			keyboardHeadtrackOverride = NO;
-			OOLog(kOOLogParameterError, @"reqYaw: %.5f\t", reqYaw);	
+			// OOLog(kOOLogParameterError, @"reqYaw: %.5f\t", reqYaw);	
 		}
 		
-		[self applyHeadtrackRoll:headtrackRoll andPitch:headtrackPitch andYaw:headtrackYaw];
-		[self setDefaultViewHeadtrackData];
+		if (!keyboardHeadtrackOverride)
+		{
+			[self applyHeadtrackRoll:headtrackRoll andPitch:headtrackPitch andYaw:headtrackYaw];
+			[self setDefaultViewHeadtrackData];
+		}
 	}
 
 	
@@ -3576,10 +3590,10 @@ static NSTimeInterval	time_last_frame;
 	{
 	if (headtrackViewKeyMode && ([gameView isDown:key_view_headtrackPitchUp] || [gameView isDown:key_view_headtrackPitchDown] || [gameView isDown:key_view_headtrackYawLeft] || [gameView isDown:key_view_headtrackYawRight]))
 	{
-		// headtrackActive = YES;
-		// headtrack_yawing = NO;
-		// headtrack_pitching = NO;
-		// headtrack_rolling = NO;
+		headtrackActive = YES;
+		headtrack_yawing = NO;
+		headtrack_pitching = NO;
+		headtrack_rolling = NO;
 		if ([gameView isDown:key_view_headtrackYawLeft] && [gameView isDown:key_view_headtrackYawRight])
 		{
 			headtrackYaw = 0.0;

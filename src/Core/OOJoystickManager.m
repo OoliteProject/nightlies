@@ -421,6 +421,10 @@ static id sSharedStickHandler = nil;
 	{
 		axstate[function] = (float)(65536 - (axisvalue + 32768)) / 65536;
 	}
+	else if ((function == AXIS_HEADTRACK_ROLL) || (function == AXIS_HEADTRACK_PITCH) || (function == AXIS_HEADTRACK_YAW))
+	{
+		axstate[function] = (float)axisvalue;
+	}
 	else
 	{
 		axstate[function] = (float)axisvalue / STICK_NORMALDIV;
@@ -553,17 +557,49 @@ static id sSharedStickHandler = nil;
 	// First check if there is a callback and...
 	if(cbObject && (cbHardware & HW_AXIS)) 
 	{
-		// ...then check if axis moved more than AXCBTHRESH - (fix for BUG #17482)
-		if(axisvalue > AXCBTHRESH)
+		int function;
+		if (evt->axis < MAX_AXES)
 		{
-			NSDictionary *fnDict = [NSDictionary dictionaryWithObjectsAndKeys:
-									[NSNumber numberWithBool: YES], STICK_ISAXIS,
-									[NSNumber numberWithInt: evt->which], STICK_NUMBER, 
-									[NSNumber numberWithInt: evt->axis], STICK_AXBUT,
-									nil];
-			cbHardware = 0;
-			[cbObject performSelector:cbSelector withObject:fnDict];
-			cbObject = nil;
+			function = axismap[evt->which][evt->axis];
+		}
+		else
+		{
+			OOLog(@"decodeAxisEvent", @"Stick axis out of range - axis was %d", evt->axis);
+			return;
+		}
+
+		switch (function)
+		{
+			case AXIS_HEADTRACK_ROLL:
+			case AXIS_HEADTRACK_PITCH:
+			case AXIS_HEADTRACK_YAW:
+				if(axisvalue > 4096)
+				{
+					NSDictionary *fnDict = [NSDictionary dictionaryWithObjectsAndKeys:
+											[NSNumber numberWithBool: YES], STICK_ISAXIS,
+											[NSNumber numberWithInt: evt->which], STICK_NUMBER, 
+											[NSNumber numberWithInt: evt->axis], STICK_AXBUT,
+											nil];
+					cbHardware = 0;
+					[cbObject performSelector:cbSelector withObject:fnDict];
+					cbObject = nil;				
+				}
+				break;
+			default:
+				// ...then check if axis moved more than AXCBTHRESH - (fix for BUG #17482)
+				if(axisvalue > AXCBTHRESH)
+				{
+					NSDictionary *fnDict = [NSDictionary dictionaryWithObjectsAndKeys:
+											[NSNumber numberWithBool: YES], STICK_ISAXIS,
+											[NSNumber numberWithInt: evt->which], STICK_NUMBER, 
+											[NSNumber numberWithInt: evt->axis], STICK_AXBUT,
+											nil];
+					cbHardware = 0;
+					[cbObject performSelector:cbSelector withObject:fnDict];
+					cbObject = nil;
+				}
+				
+				break;
 		}
 		
 		// we are done.
@@ -587,6 +623,7 @@ static id sSharedStickHandler = nil;
 		OOLog(@"decodeAxisEvent", @"Stick axis out of range - axis was %d", evt->axis);
 		return;
 	}
+
 	switch (function)
 	{
 		case STICK_NOFUNCTION:
@@ -606,10 +643,13 @@ static id sSharedStickHandler = nil;
 		case AXIS_HEADTRACK_ROLL:
 		case AXIS_HEADTRACK_PITCH:
 		case AXIS_HEADTRACK_YAW:
-			axstate[function] = axisvalue;         
+			axstate[function] = axisvalue / 32768;         
+			OOLog(kOOLogParameterError, @"axis:%i\t axisvalue: %.8f\t", evt->axis, axisvalue);	
+			break;
 		default:
 			// set the state with no modification.
 			axstate[function] = axisvalue / 32768;         
+
 	}
 	if ((function == AXIS_PITCH) && invertPitch) axstate[function] = -1.0*axstate[function];
 }

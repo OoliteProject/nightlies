@@ -3257,7 +3257,7 @@ NSComparisonResult marketSorterByMassUnit(id a, id b, void *market);
 		headtrack_rolling = NO;
 	}
 */
-	OOLog(kOOLogParameterError, @"Rolling - headtrack_roll_total: %.5f", headtrackRoll);	
+//	OOLog(kOOLogParameterError, @"Rolling - headtrack_roll_total: %.5f", headtrackRoll);	
 }
 
 
@@ -3278,7 +3278,7 @@ NSComparisonResult marketSorterByMassUnit(id a, id b, void *market);
 		headtrack_rolling = NO;
 	}
 */
-	OOLog(kOOLogParameterError, @"Pitching - headtrack_pitch_total: %.5f", headtrackPitch);	
+//	OOLog(kOOLogParameterError, @"Pitching - headtrack_pitch_total: %.5f", headtrackPitch);	
 }
 
 
@@ -3299,7 +3299,7 @@ NSComparisonResult marketSorterByMassUnit(id a, id b, void *market);
 		headtrack_rolling = NO;
 	}
 */
-	OOLog(kOOLogParameterError, @"Yawing - headtrack_yaw_total: %.5f", headtrackYaw);	
+//	OOLog(kOOLogParameterError, @"Yawing - headtrack_yaw_total: %.5f", headtrackYaw);	
 }
 
 
