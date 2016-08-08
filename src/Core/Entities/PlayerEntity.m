@@ -8120,6 +8120,23 @@ NSComparisonResult marketSorterByMassUnit(id a, id b, void *market);
 		{
 			NSString *system = infoSystemName;
 			[gui setTitle:OOExpandKeyWithSeed(infoSystemRandomSeed, @"sysdata-data-on-system", system)];
+		}
+		else
+		{
+			[gui setTitle:OOExpandKey(@"sysdata-data-on-system-no-name")];
+		}
+
+		if (concealment >= OO_SYSTEMCONCEALMENT_NODATA)
+		{
+			OOGUIRow i = [gui addLongText:OOExpandKey(@"sysdata-data-on-system-no-data") startingAtRow:15 align:GUI_ALIGN_LEFT];
+			missionTextRow = i;
+			for (i-- ; i > 14 ; --i)
+			{
+				[gui setColor:[gui colorFromSetting:kGuiSystemdataDescriptionColor defaultValue:[OOColor greenColor]] forRow:i];
+			}
+		}
+		else
+		{
 			NSArray *populationDescLines = [populationDesc componentsSeparatedByString:@"\n"];
 			NSString *populationDesc1 = [populationDescLines objectAtIndex:0];
 			NSString *populationDesc2 = [populationDescLines lastObject];
@@ -8164,6 +8181,10 @@ NSComparisonResult marketSorterByMassUnit(id a, id b, void *market);
 
 			NSPoint infoSystemCoordinates = [[UNIVERSE systemManager] getCoordinatesForSystem: info_system_id inGalaxy: galaxy_number];
 			double distance = distanceBetweenPlanetPositions(infoSystemCoordinates.x, infoSystemCoordinates.y, galaxy_coordinates.x, galaxy_coordinates.y);
+			if(distance == 0.0 && info_system_id != system_id)
+			{
+				distance = 0.1;
+			}
 			NSString *distanceInfo = [NSString stringWithFormat: @"%.1f ly", distance];
 			if (ANA_mode != OPTIMIZED_BY_NONE)
 			{
@@ -8173,6 +8194,10 @@ NSComparisonResult marketSorterByMassUnit(id a, id b, void *market);
 				{
 					double routeDistance = [[routeInfo objectForKey: @"distance"] doubleValue];
 					double routeTime = [[routeInfo objectForKey: @"time"] doubleValue];
+					if(routeDistance == 0.0 && info_system_id != system_id) {
+						routeDistance = 0.1;
+						routeTime = 0.01;
+					}
 					distanceInfo = [NSString stringWithFormat: @"%.1f ly / %.1f Hours", routeDistance, routeTime];
 				}
 			}
@@ -8192,16 +8217,6 @@ NSComparisonResult marketSorterByMassUnit(id a, id b, void *market);
 			{
 				// nil default = fall back to global default colour
 				[gui setColor:[gui colorFromSetting:kGuiSystemdataFactsColor defaultValue:nil] forRow:i];
-			}
-		}
-		else
-		{
-			[gui setTitle:OOExpandKey(@"sysdata-data-on-system-no-name")];			
-			OOGUIRow i = [gui addLongText:OOExpandKey(@"sysdata-data-on-system-no-data") startingAtRow:15 align:GUI_ALIGN_LEFT];
-			missionTextRow = i;
-			for (i-- ; i > 14 ; --i)
-			{
-				[gui setColor:[gui colorFromSetting:kGuiSystemdataDescriptionColor defaultValue:[OOColor greenColor]] forRow:i];
 			}
 		}
 
