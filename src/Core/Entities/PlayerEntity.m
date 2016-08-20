@@ -852,7 +852,6 @@ NSComparisonResult marketSorterByMassUnit(id a, id b, void *market);
 
 - (NSDictionary *) commanderDataDictionary
 {
-	NSAssert([self isDocked], @"Cannot create commander data dictionary unless docked.");
 	int i;
 
 	NSMutableDictionary *result = [NSMutableDictionary dictionary];
