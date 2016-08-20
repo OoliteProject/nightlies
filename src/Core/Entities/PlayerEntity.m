@@ -1069,9 +1069,16 @@ NSComparisonResult marketSorterByMassUnit(id a, id b, void *market);
 
 	// docked station
 	StationEntity *dockedStation = [self dockedStation];
-	[result setObject:[dockedStation primaryRole] forKey:@"docked_station_role"];
-	HPVector dpos = [dockedStation position];
-	[result setObject:ArrayFromHPVector(dpos) forKey:@"docked_station_position"];
+	[result setObject:dockedStation != nil ? [dockedStation primaryRole]:@"" forKey:@"docked_station_role"];
+	if (dockedStation)
+	{
+		HPVector dpos = [dockedStation position];
+		[result setObject:ArrayFromHPVector(dpos) forKey:@"docked_station_position"];
+	}
+	else
+	{
+		[result setObject:[NSArray array] forKey:@"docked_station_position"];
+	}
 	[result setObject:[UNIVERSE getStationMarkets] forKey:@"station_markets"];
 
 	// scenario information
