@@ -33,11 +33,33 @@ MA 02110-1301, USA.
 "use strict";
 
 this.name = "Cloaking Device";
-this.author			= "cim";
-this.copyright		= "© 2008-2013 the Oolite team.";
+this.author			= "cim, cag";
+this.copyright		= "© 2008-2017 the Oolite team.";
 
 
-this.activated = function()
+this.activated = function activated()
 {
-	player.ship.isCloaked = !player.ship.isCloaked;
+        "use strict";
+        var that = activated;
+        var entitiesWithScanClass = (that.entitiesWithScanClass = that.entitiesWithScanClass
+                                                                     || system.entitiesWithScanClass);
+        var missilesTargetingPlayer = (that.missilesTargetingPlayer = that.missilesTargetingPlayer || []);
+        
+        var isCloaked, ps = player && player.ship;
+        isCloaked = ps.isCloaked = !ps.isCloaked;
+      
+        if (isCloaked)
+        {
+            // find missiles targeting player
+            var ent, scannerRange = ps.scannerRange;
+            missilesTargetingPlayer.length = 0;
+            missilesTargetingPlayer = entitiesWithScanClass( 'CLASS_MISSILE', ps, scannerRange );
+            for( var i = 0, len = missilesTargetingPlayer.length; i < len; i++ ) 
+            {
+                ent = missilesTargetingPlayer[i];
+                if( !ent.isValid ) continue;
+                if( ent.target !== ps ) continue;
+                ent.target = null;     // target lost -> missile detonates
+            }
+        }
 }
