@@ -1,3 +1,23 @@
+Changes between Oolite 1.86 and Oolite 1.86.1:
+
+Bug fixes:
+==========
+* Fixed issue with the primable equipment manager not being able to handle
+  more than 21 items.
+* Fixed diffuse lighting on default planet shader.
+* Removed instances of "vicious vicious" in planet description.
+* Missing icon resource file added for the Oolite executable.
+* Windows port: Added missing application manifest, to address OS related 
+  issues as per Microsoft recommendation.
+* Windows port: Clean solution to High-DPI support issue through the use of 
+  the application manifest.
+* Windows port: Addressed issue, for Windows 8 and higher, where wrong OS 
+  version was reported in the log file. Correct OS version, including Update 
+  Build Revision when available, is now reported using the application 
+  manifest.
+
+-------------------------------------------------------------------------------
+
 Changes between Oolite 1.84 and Oolite 1.86:
 
 General:
