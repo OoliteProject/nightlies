@@ -3,7 +3,7 @@
 	Default fragment shader for Oolite NEW_PLANETS.
 	
 	
-	Â© 2009â€“2013 Jens Ayton
+	© 2009-2013 Jens Ayton
 	
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -73,7 +73,7 @@ uniform sampler2D		uIlluminationMap;
 
 
 // Specular map parameters.
-// Separate OOSTD_SPECULAR_MAP is for testing in OpenGL Shader Builder, which doesnâ€™t deal with alpha channels sensibly.
+// Separate OOSTD_SPECULAR_MAP is for testing in OpenGL Shader Builder, which doesn't deal with alpha channels sensibly.
 #define USE_SPECULAR OOSTD_SPECULAR_MAP || OOSTD_NORMAL_AND_SPECULAR_MAP
 #if (OOSTD_SPECULAR_MAP)
 uniform sampler2D		uSpecularMap;
@@ -119,9 +119,6 @@ uniform sampler2D		uDiffuseMap;
 uniform sampler2D		uNormalMap;
 #endif
 #endif
-
-uniform vec4	aSeaColor;
-uniform vec4	aLandColor;
 
 
 // No vNormal, because normal is always 0,0,1 in tangent space.
@@ -250,7 +247,7 @@ void main()
 	vec3 diffuseLight = diffuseIntensity * (DIFFUSE_LIGHT * max(0.0, dot(normal, light1Vector)) + AMBIENT_LIGHT);
 	mat3 I;
 	int i,j;
-	vec3 sample, mySample;
+	vec3 sample;
 #if OOSTD_CUBE_MAP
 	vec4 diffuseMapSample = textureCube(uDiffuseMap, vCoords);
 	for (i=0; i<3; i++)
@@ -268,7 +265,6 @@ void main()
 		for (j=0; j<3; j++)
 		{
 			sample = texture2D(uDiffuseMap, texCoords + vec2((i-1)*0.0001, (j-1)*0.0001)).rgb;
-			if (i==1 && j==1) mySample = sample;
 			I[i][j] = length(sample);
 		}
 	}
