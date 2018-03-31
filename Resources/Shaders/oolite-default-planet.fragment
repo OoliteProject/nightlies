@@ -3,7 +3,7 @@
 	Default fragment shader for Oolite NEW_PLANETS.
 	
 	
-	© 2009–2013 Jens Ayton
+	Â© 2009â€“2013 Jens Ayton
 	
 	Permission is hereby granted, free of charge, to any person obtaining a copy
 	of this software and associated documentation files (the "Software"), to deal
@@ -73,7 +73,7 @@ uniform sampler2D		uIlluminationMap;
 
 
 // Specular map parameters.
-// Separate OOSTD_SPECULAR_MAP is for testing in OpenGL Shader Builder, which doesn’t deal with alpha channels sensibly.
+// Separate OOSTD_SPECULAR_MAP is for testing in OpenGL Shader Builder, which doesnâ€™t deal with alpha channels sensibly.
 #define USE_SPECULAR OOSTD_SPECULAR_MAP || OOSTD_NORMAL_AND_SPECULAR_MAP
 #if (OOSTD_SPECULAR_MAP)
 uniform sampler2D		uSpecularMap;
@@ -120,12 +120,26 @@ uniform sampler2D		uNormalMap;
 #endif
 #endif
 
+uniform vec4	aSeaColor;
+uniform vec4	aLandColor;
+
+
 // No vNormal, because normal is always 0,0,1 in tangent space.
 varying vec3			vEyeVector;
 varying vec2			vTexCoords;
 varying vec3			vLight1Vector;
 varying vec3			vCoords;
 
+mat3 sx = mat3( 
+    1.0, 2.0, 1.0, 
+    0.0, 0.0, 0.0, 
+   -1.0, -2.0, -1.0 
+);
+mat3 sy = mat3( 
+    -1.0, 0.0, 1.0, 
+    -2.0, 0.0, 2.0, 
+    -1.0, 0.0, 1.0 
+);
 
 vec3 CalcDiffuseIntensity(in vec3 lightVector, in vec3 normal)
 {
@@ -200,6 +214,10 @@ float TexLongitude(float z, float y)
 	return result + step(z, 0.0) * sign(y) * 0.5 + 0.25;
 }
 
+vec3 random3( vec3 p) {
+	return fract(sin(vec3(dot(p,vec3(127.1,311.7,231.7)),dot(p,vec3(269.5,183.3,371.3)),dot(p,vec3(319.5,217.3,113.7))))*43758.5453);
+}
+
 
 void main()
 {
@@ -230,11 +248,39 @@ void main()
 	vec3 light1Vector = normalize(vLight1Vector);
 	vec3 diffuseIntensity = CalcDiffuseIntensity(light1Vector, normal);
 	vec3 diffuseLight = diffuseIntensity * (DIFFUSE_LIGHT * max(0.0, dot(normal, light1Vector)) + AMBIENT_LIGHT);
+	mat3 I;
+	int i,j;
+	vec3 sample, mySample;
 #if OOSTD_CUBE_MAP
 	vec4 diffuseMapSample = textureCube(uDiffuseMap, vCoords);
+	for (i=0; i<3; i++)
+	{
+		for (j=0; j<3; j++)
+		{
+			sample = textureCube(uDiffuseMap, vCoords + vec2(i-1,j-1)).rgb;
+			I[i][j] = length(sample);
+		}
+	}
 #else
 	vec4 diffuseMapSample = texture2D(uDiffuseMap, texCoords);
+	for (i=0; i<3; i++)
+	{
+		for (j=0; j<3; j++)
+		{
+			sample = texture2D(uDiffuseMap, texCoords + vec2((i-1)*0.0001, (j-1)*0.0001)).rgb;
+			if (i==1 && j==1) mySample = sample;
+			I[i][j] = length(sample);
+		}
+	}
+	vec4 otherSample = texture2D(uDiffuseMap, texCoords + vec2(-.0001,-.0001));
 #endif
+	float gx = dot(sx[0],I[0]) + dot(sx[1],I[1]) + dot(sx[2],I[2]);
+	float gy = dot(sy[0],I[0]) + dot(sy[1],I[1]) + dot(sy[2],I[2]);
+	
+	
+	float g = sqrt(pow(gx, 2.0) + pow(gy,2.0));
+
+		
 	vec3 diffuseColor = diffuseMapSample.rgb;
 	totalColor += diffuseColor * diffuseLight;
 	
@@ -256,6 +302,87 @@ void main()
 	vec3 illuminationColor = ILLUMINATION_COLOR;
 	totalColor += (1.0 - diffuseIntensity.r) * illuminationColor;
 #endif
+
+	vec3 st = coords.xyz;
+	st *= 192.0;
+
+	vec3 vColor = vec3(.0);
+
+	vec3 i_st = floor(st);
+	vec3 f_st = fract(st);
+
+	float m_dist = 1.;  // minimun distance
+
+	for (int y= -1; y <= 1; y++) {
+			for (int x= -1; x <= 1; x++) {
+				for (int z= -1; z <= 1; z++) {
+					// Neighbor place in the grid
+					vec3 neighbor = vec3(float(x),float(y),float(z));
+
+					// Random position from current + neighbor place in the grid
+					vec3 point = random3(i_st + neighbor);
+
+					// Vector between the pixel and the point
+					vec3 diff = neighbor + point - f_st;
+
+					// Distance to the point
+					float dist = length(diff);
+
+					// Keep the closer distance
+					m_dist = min(m_dist, dist);
+				}
+			}
+	}
+
+	float rnd = m_dist;
+
+	vec3 st1 = coords.xyz;
+  // Scale
+	st1 *= 11.5; // this can scale the Voronoi noise
+
+	// Tile the space
+	i_st = floor(st1);
+	f_st = fract(st1);
+
+	m_dist = 1.;  // minimun distance
+
+	for (int y= -1; y <= 1; y++) {
+			for (int x= -1; x <= 1; x++) {
+				for (int z= -1; z <= 1; z++) {
+					// Neighbor place in the grid
+					vec3 neighbor = vec3(float(x),float(y),float(z));
+
+					// Random position from current + neighbor place in the grid
+					vec3 point = random3(i_st + neighbor);
+
+					// Vector between the pixel and the point
+					vec3 diff = neighbor + point - f_st;
+
+					// Distance to the point
+					float dist = length(diff);
+
+					// Keep the closer distance
+					m_dist = min(m_dist, dist);
+				}
+			}
+	}
+
+	// Draw the min distance (distance field)
+	vColor += m_dist; // Voronoi (city area) noise
+	vColor = (vColor - 0.5) * 4.5 + 0.5 - 1.0;
+	//                        ^contrast    ^brightness
+
+	vec3 fColor = 5.0 * vColor + 5.0 * vec3(rnd);
 	
-	gl_FragColor = vec4(totalColor, 1.0);
+	
+	if ( (fColor.r >= 17.3 * rnd) && (g > 0.013))
+		fColor = vec3(0.5, 0.3, 0.2);
+	else
+		fColor = totalColor;
+
+
+	
+
+	gl_FragColor = (dot(vec3(0.0, 0.0, 1.0), light1Vector)>kHarshShadowFactor-.05?vec4(totalColor, 1.0):vec4(fColor, 1.0));
+
 }
