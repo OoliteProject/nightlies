@@ -254,7 +254,7 @@ void main()
 	{
 		for (j=0; j<3; j++)
 		{
-			sample = textureCube(uDiffuseMap, vCoords + vec2(i-1,j-1)).rgb;
+			sample = textureCube(uDiffuseMap, vCoords + vec3(i-1,j-1,0.0)).rgb;
 			I[i][j] = length(sample);
 		}
 	}
